@@ -3,6 +3,20 @@ AC_INIT(asignify, 1.0)
 
 AC_CANONICAL_SYSTEM
 
+ASIGNIFY_LIBRARY_VERSION=1:0:0
+#                        | | |
+#                 +------+ | +---+
+#                 |        |     |
+#              current:revision:age
+#                 |        |     |
+#                 |        |     +- increment if interfaces have been added
+#                 |        |        set to zero if interfaces have been removed
+#                 |        |        or changed
+#                 |        +- increment if source code has changed
+#                 |           set to zero if current is incremented
+#                 +- increment if interfaces have been added, removed or changed
+AC_SUBST(ASIGNIFY_LIBRARY_VERSION)
+
 AM_INIT_AUTOMAKE([1.11 foreign -Wno-portability no-dist-gzip dist-xz])
 AM_SILENT_RULES([yes])
 

@@ -15,7 +15,8 @@ libasignify_la_SOURCES =	tweetnacl.c \
 							b64_pton.c \
 							util.c
 
-libasignify_la_LDFLAGS = @OPENSSL_LDFLAGS@ \
+libasignify_la_LDFLAGS = -version-info @ASIGNIFY_LIBRARY_VERSION@ \
+			@OPENSSL_LDFLAGS@ \
 			@OPENSSL_LIBS@ \
 			@OS_LIBS@
 
