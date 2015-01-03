@@ -78,5 +78,6 @@ struct asignify_pubkey* asignify_pubkey_load(FILE *f);
 bool asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 	struct asignify_signature *sig, const unsigned char *data, size_t dlen);
 void asignify_pubkey_free(struct asignify_pubkey *pk);
+bool asignify_pubkey_write(struct asignify_pubkey *pk, FILE *f);
 
 #endif /* ASIGNIFY_INTERNAL_H_ */

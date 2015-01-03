@@ -211,3 +211,29 @@ asignify_pubkey_free(struct asignify_pubkey *pk)
 		free(pk);
 	}
 }
+
+bool
+asignify_pubkey_write(struct asignify_pubkey *pk, FILE *f)
+{
+	char *b64data, *b64id;
+	bool ret = false;
+
+	if (pk == NULL || f == NULL) {
+		return (false);
+	}
+
+	if (pk->version == 1) {
+		b64id = xmalloc(pk->id_len * 2);
+		b64_ntop(pk->id, pk->id_len, b64id, pk->id_len * 2);
+		b64data = xmalloc(pk->data_len * 2);
+		b64_ntop(pk->data, pk->data_len, b64data, pk->data_len * 2);
+		ret = (fprintf(f, "%s:1:%s:%s\n", PUBKEY_MAGIC, b64id, b64data) > 0);
+		free(b64id);
+		free(b64data);
+	}
+	else if (pk->version == 0) {
+		/* XXX: support openbsd pubkeys format */
+	}
+
+	return (ret);
+}
