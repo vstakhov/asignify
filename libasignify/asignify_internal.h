@@ -24,8 +24,59 @@
 #define ASIGNIFY_INTERNAL_H_
 
 #include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
+
+#define OBSD_COMMENTHDR "untrusted comment: "
+
+struct asignify_pubkey {
+	unsigned char *data;
+	size_t data_len;
+	unsigned char *id;
+	size_t id_len;
+	unsigned int version;
+};
+
+struct asignify_signature {
+	unsigned char *data;
+	size_t data_len;
+	unsigned char *id;
+	size_t id_len;
+	unsigned int version;
+};
 
 void explicit_memzero(void * const pnt, const size_t len);
 void randombytes(unsigned char *buf, uint64_t len);
+
+FILE * xfopen(const char *fname, const char *mode);
+void * xmalloc(size_t len);
+void * xmalloc0(size_t len);
+
+int b64_pton(char const *src, unsigned char *target, size_t targsize);
+int b64_pton_stop(char const *src, unsigned char *target, size_t targsize, const char *stop);
+int b64_ntop(unsigned char *src, size_t srclength, char *target,
+	size_t targsize);
+
+enum asignify_error {
+	ASIGNIFY_ERROR_OK = 0,
+	ASIGNIFY_ERROR_NO_PUBKEY,
+	ASIGNIFY_ERROR_FILE,
+	ASIGNIFY_ERROR_FORMAT,
+	ASIGNIFY_ERROR_DECRYPT,
+	ASIGNIFY_ERROR_PASSWORD,
+	ASIGNIFY_ERROR_VERIFY,
+	ASIGNIFY_ERROR_MISUSE,
+	ASIGNIFY_ERROR_MAX
+};
+
+const char * xerr_string(enum asignify_error code);
+
+/*
+ * Pubkey operations
+ */
+struct asignify_pubkey* asignify_pubkey_load(FILE *f);
+bool asignify_pubkey_check_signature(struct asignify_pubkey *pk,
+	struct asignify_signature *sig, const unsigned char *data, size_t dlen);
+void asignify_pubkey_free(struct asignify_pubkey *pk);
 
 #endif /* ASIGNIFY_INTERNAL_H_ */

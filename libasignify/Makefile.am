@@ -14,6 +14,8 @@ libasignify_la_SOURCES =	tweetnacl.c \
 							sha2.c \
 							bcrypt_pbkdf.c \
 							b64_pton.c \
+							pubkey.c \
+							verify.c \
 							util.c
 
 libasignify_la_LDFLAGS = -version-info @ASIGNIFY_LIBRARY_VERSION@ \

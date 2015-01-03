@@ -42,15 +42,7 @@
  * IF IBM IS APPRISED OF THE POSSIBILITY OF SUCH DAMAGES.
  */
 
-#include <sys/types.h>
-#include <sys/param.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <arpa/nameser.h>
-
 #include <ctype.h>
-#include <resolv.h>
 #include <stdio.h>
 
 #include <stdlib.h>
@@ -124,15 +116,11 @@ static const char Pad64 = '=';
    */
 
 int
-b64_ntop(src, srclength, target, targsize)
-	u_char const *src;
-	size_t srclength;
-	char *target;
-	size_t targsize;
+b64_ntop(unsigned char *src, size_t srclength, char *target, size_t targsize)
 {
 	size_t datalength = 0;
-	u_char input[3];
-	u_char output[4];
+	unsigned char input[3];
+	unsigned char output[4];
 	int i;
 
 	while (2 < srclength) {
@@ -188,19 +176,23 @@ b64_ntop(src, srclength, target, targsize)
  */
 
 int
-b64_pton(src, target, targsize)
-	char const *src;
-	u_char *target;
-	size_t targsize;
+b64_pton_stop(char const *src, unsigned char *target, size_t targsize,
+	const char *stop)
 {
-	int tarindex, state, ch;
-	u_char nextbyte;
+	int tarindex, state, ch, slen;
+	unsigned char nextbyte;
 	char *pos;
 
 	state = 0;
 	tarindex = 0;
+	slen = strlen(stop) + 1;
 
-	while ((ch = (unsigned char)*src++) != '\0') {
+	for (;;) {
+		ch = (unsigned char)*src++;
+
+		if (memchr(stop, ch, slen) != NULL)
+			break;
+
 		if (isspace(ch))	/* Skip whitespace anywhere. */
 			continue;
 
@@ -289,8 +281,8 @@ b64_pton(src, target, targsize)
 			 * We know this char is an =.  Is there anything but
 			 * whitespace after it?
 			 */
-			for (; ch != '\0'; ch = (unsigned char)*src++)
-				if (!isspace(ch))
+			for (;; ch = (unsigned char)*src++)
+				if (!isspace(ch) && memchr(stop, ch, slen) == NULL)
 					return (-1);
 
 			/*
@@ -313,4 +305,10 @@ b64_pton(src, target, targsize)
 	}
 
 	return (tarindex);
+}
+
+int
+b64_pton(char const *src, unsigned char *target, size_t targsize)
+{
+	return (b64_pton_stop(src, target, targsize, ""));
 }

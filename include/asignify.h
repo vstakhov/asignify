@@ -44,6 +44,16 @@ typedef struct asignify_sign_ctx asignify_sign_t;
 typedef int (*asignify_password_cb)(char *buf, size_t len, void *d);
 
 /**
+ * Signature type
+ */
+enum asignify_digest_type {
+	ASIGNIFY_DIGEST_SHA256 = 0,
+	ASIGNIFY_DIGEST_SHA512,
+	ASIGNIFY_DIGEST_BLAKE2,
+	ASIGNIFY_DIGEST_MAX
+};
+
+/**
  * Initialize verify context
  * @return new verify context or NULL
  */
@@ -77,7 +87,13 @@ bool asignify_verify_file(asignify_verify_t *ctx, const char *checkf);
  * @param ctx verify context
  * @return constant string corresponding to the last error occurred during verification
  */
-const char asignify_verify_get_error(asignify_verify_t *ctx);
+const char* asignify_verify_get_error(asignify_verify_t *ctx);
+
+/**
+ * Free verify context
+ * @param ctx verify context
+ */
+void asignify_verify_free(asignify_verify_t *ctx);
 
 /**
  * Initialize sign context
@@ -100,9 +116,11 @@ bool asignify_sign_load_privkey(asignify_sign_t *ctx, const char *privf,
  * Add specified file to the signature context
  * @param ctx sign context
  * @param f file name or '-' to read from stdin
+ * @param dt type of digest to be calculated
  * @return true if a file is valid
  */
-bool asignify_sign_add_file(asignify_sign_t *ctx, const char *f);
+bool asignify_sign_add_file(asignify_sign_t *ctx, const char *f,
+	enum asignify_digest_type dt);
 
 /**
  * Write the complete signature for this context
@@ -117,7 +135,13 @@ bool asignify_sign_write_signature(asignify_sign_t *ctx, const char *sigf);
  * @param ctx sign context
  * @return constant string corresponding to the last error occurred during signing
  */
-const char asignify_sign_get_error(asignify_sign_t *ctx);
+const char* asignify_sign_get_error(asignify_sign_t *ctx);
+
+/**
+ * Free sign context
+ * @param ctx sign context
+ */
+void asignify_sign_free(asignify_sign_t *ctx);
 
 #if defined(__cplusplus)
 }

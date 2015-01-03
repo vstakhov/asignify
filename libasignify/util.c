@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #ifdef HAVE_OPENSSL
 #include <openssl/rand.h>
@@ -38,6 +39,14 @@
 #endif
 
 #include "asignify_internal.h"
+
+const char* err_str[ASIGNIFY_ERROR_MAX] = {
+	[ASIGNIFY_ERROR_OK] = "No error",
+	[ASIGNIFY_ERROR_FILE] = "File IO error",
+	[ASIGNIFY_ERROR_FORMAT] = "Incorrect data format",
+	[ASIGNIFY_ERROR_MISUSE] = "Library is used incorrectly",
+	[ASIGNIFY_ERROR_VERIFY] = "Signature verification error"
+};
 
 #ifdef HAVE_WEAK_SYMBOLS
 __attribute__((weak)) void
@@ -81,4 +90,69 @@ randombytes(unsigned char *buf, uint64_t len)
 #else
 # error No random numbers can be generated on your system
 #endif
+}
+
+
+FILE *
+xopen(const char *fname, const char *mode)
+{
+	struct stat sb;
+	FILE *res = NULL;
+
+	if (strcmp(fname, "-") == 0) {
+		if (strchr(mode, 'w') != NULL) {
+			return (stdout);
+		}
+		else {
+			return (stdin);
+		}
+	}
+	else {
+		if (stat(fname, &sb) == -1) {
+			return (NULL);
+		}
+		else if (S_ISDIR(sb.st_mode)) {
+			errno = EINVAL;
+		}
+		else {
+			res = fopen(fname, mode);
+		}
+	}
+
+	return (res);
+}
+
+void *
+xmalloc(size_t len)
+{
+	void *p;
+
+	if (len >= SIZE_MAX / 2) {
+		abort();
+	}
+
+	if (!(p = malloc(len))) {
+		abort();
+	}
+	return (p);
+}
+
+void *
+xmalloc0(size_t len)
+{
+	void *p = xmalloc(len);
+
+	memset(p, 0, len);
+
+	return (p);
+}
+
+const char *
+xerr_string(enum asignify_error code)
+{
+	if (code < ASIGNIFY_ERROR_OK || code >= ASIGNIFY_ERROR_MAX) {
+		return (NULL);
+	}
+
+	return (err_str[code]);
 }
