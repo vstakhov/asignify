@@ -820,6 +820,8 @@ crypto_sign_verify_detached(const u8 *sig, const u8 *m, u64 mlen, const u8 *pk)
 		return -1;
 	}
 
+	if (unpackneg(q,pk)) return -1;
+
 	SHA512Init(&hs);
     SHA512Update(&hs, sig, 32);
     SHA512Update(&hs, pk, 32);
