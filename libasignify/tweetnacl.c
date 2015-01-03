@@ -1,5 +1,4 @@
 #include "tweetnacl.h"
-#include "sha2.h"
 #define FOR(i,n) for (i = 0;i < n;++i)
 #define sv static void
 
@@ -810,11 +809,11 @@ int crypto_sign_open(u8 *m,u64 *mlen,const u8 *sm,u64 n,const u8 *pk)
 }
 
 int
-crypto_sign_verify_detached(const u8 *sig, const u8 *m, u64 mlen, const u8 *pk)
+crypto_sign_verify_detached(const u8 *sig, const u8 *h, const u8 *pk)
 {
-	SHA2_CTX hs;
-	u8 t[32],h[64];
+	u8 t[32], hh[64];
 	gf p[4],q[4];
+	int i;
 
 	if (sig[63] & 224) {
 		return -1;
@@ -822,14 +821,9 @@ crypto_sign_verify_detached(const u8 *sig, const u8 *m, u64 mlen, const u8 *pk)
 
 	if (unpackneg(q,pk)) return -1;
 
-	SHA512Init(&hs);
-    SHA512Update(&hs, sig, 32);
-    SHA512Update(&hs, pk, 32);
-    SHA512Update(&hs, m, mlen);
-    SHA512Final(h, &hs);
-
-    reduce(h);
-    scalarmult(p,q,h);
+    FOR(i, 64) hh[i] = h[i];
+    reduce(hh);
+    scalarmult(p,q,hh);
 
     scalarbase(q,sig + 32);
     add(p,q);

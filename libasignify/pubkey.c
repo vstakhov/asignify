@@ -32,6 +32,7 @@
 #include "asignify.h"
 #include "asignify_internal.h"
 #include "tweetnacl.h"
+#include "sha2.h"
 
 #define PUBKEY_MAGIC "asignify-pubkey:"
 #define OBSD_PKALG "Ed"
@@ -178,6 +179,9 @@ bool
 asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 	struct asignify_signature *sig, const unsigned char *data, size_t dlen)
 {
+	SHA2_CTX hs;
+	unsigned char h[SHA512_DIGEST_LENGTH];
+
 	if (pk == NULL || sig == NULL) {
 		return (false);
 	}
@@ -191,8 +195,56 @@ asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 
 	if (pk->version == 1) {
 		/* ED25519 */
+		SHA512Init(&hs);
+		SHA512Update(&hs, sig->data, 32);
+		SHA512Update(&hs, pk->data, 32);
+	    SHA512Update(&hs, data, dlen);
+	    SHA512Final(h, &hs);
+		if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data)) {
+			return (true);
+		}
+	}
 
-		if (crypto_sign_ed25519_verify_detached(sig->data, data, dlen, pk->data)) {
+	return (false);
+}
+
+bool asignify_pubkey_check_signature_file(struct asignify_pubkey *pk,
+	struct asignify_signature *sig, FILE *f)
+{
+	SHA2_CTX hs;
+	unsigned char h[SHA512_DIGEST_LENGTH];
+#if BUFSIZ >= 2048
+	unsigned char buf[BUFSIZ];
+#else
+	/* BUFSIZ is insanely small */
+	unsigned char buf[4096];
+#endif
+	int r;
+
+	if (pk == NULL || sig == NULL) {
+		return (false);
+	}
+
+	/* Check sanity */
+	if (pk->version != sig->version ||
+			pk->id_len != sig->id_len ||
+			memcmp(pk->id, sig->id, sig->id_len) != 0) {
+		return (false);
+	}
+
+	if (pk->version == 1) {
+		/* ED25519 */
+		SHA512Init(&hs);
+		SHA512Update(&hs, sig->data, 32);
+		SHA512Update(&hs, pk->data, 32);
+
+		while ((r = fread(buf, 1, sizeof(buf), f)) > 0) {
+			SHA512Update(&hs, buf, r);
+		}
+
+		SHA512Final(h, &hs);
+
+		if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data)) {
 			return (true);
 		}
 	}
