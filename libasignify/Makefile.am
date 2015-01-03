@@ -1,0 +1,23 @@
+lib_LTLIBRARIES = libasignify.la
+
+noinst_HEADERS=	tweetnacl.h \
+	blf.h \
+	blake2.h \
+	blake2-impl.h \
+	asignify_internal.h 
+
+# Sources for libasignify
+libasignify_la_SOURCES =	tweetnacl.c \
+							blf.c \
+							blake2b-ref.c \
+							sha2.c \
+							bcrypt_pbkdf.c \
+							b64_pton.c \
+							util.c
+
+libasignify_la_LDFLAGS = @OPENSSL_LDFLAGS@ \
+			@OPENSSL_LIBS@ \
+			@OS_LIBS@
+
+libasignify_la_CPPFLAGS = -I$(top_srcdir)/include \
+			@OPENSSL_INCLUDES@

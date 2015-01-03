@@ -1,0 +1,1 @@
+SUBDIRS=libasignify include bin
