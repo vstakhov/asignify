@@ -33,6 +33,7 @@
 #include "asignify_internal.h"
 #include "tweetnacl.h"
 #include "sha2.h"
+#include "blake2.h"
 
 #define PUBKEY_MAGIC "asignify-pubkey:"
 #define OBSD_PKALG "Ed"
@@ -179,8 +180,8 @@ bool
 asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 	struct asignify_signature *sig, const unsigned char *data, size_t dlen)
 {
-	SHA2_CTX hs;
-	unsigned char h[SHA512_DIGEST_LENGTH];
+	blake2b_state hs;
+	unsigned char h[crypto_sign_HASHBYTES];
 
 	if (pk == NULL || sig == NULL) {
 		return (false);
@@ -195,11 +196,12 @@ asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 
 	if (pk->version == 1) {
 		/* ED25519 */
-		SHA512Init(&hs);
-		SHA512Update(&hs, sig->data, 32);
-		SHA512Update(&hs, pk->data, 32);
-	    SHA512Update(&hs, data, dlen);
-	    SHA512Final(h, &hs);
+		blake2b_init(&hs, crypto_sign_HASHBYTES);
+		blake2b_update(&hs, sig->data, 32);
+		blake2b_update(&hs, pk->data, 32);
+		blake2b_update(&hs, data, dlen);
+		blake2b_final(&hs, h, sizeof(h));
+
 		if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data)) {
 			return (true);
 		}
@@ -211,8 +213,8 @@ asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 bool asignify_pubkey_check_signature_file(struct asignify_pubkey *pk,
 	struct asignify_signature *sig, FILE *f)
 {
-	SHA2_CTX hs;
-	unsigned char h[SHA512_DIGEST_LENGTH];
+	blake2b_state hs;
+	unsigned char h[crypto_sign_HASHBYTES];
 #if BUFSIZ >= 2048
 	unsigned char buf[BUFSIZ];
 #else
@@ -234,15 +236,15 @@ bool asignify_pubkey_check_signature_file(struct asignify_pubkey *pk,
 
 	if (pk->version == 1) {
 		/* ED25519 */
-		SHA512Init(&hs);
-		SHA512Update(&hs, sig->data, 32);
-		SHA512Update(&hs, pk->data, 32);
+		blake2b_init(&hs, crypto_sign_HASHBYTES);
+		blake2b_update(&hs, sig->data, 32);
+		blake2b_update(&hs, pk->data, 32);
 
 		while ((r = fread(buf, 1, sizeof(buf), f)) > 0) {
-			SHA512Update(&hs, buf, r);
+			blake2b_update(&hs, buf, r);
 		}
 
-		SHA512Final(h, &hs);
+		blake2b_final(&hs, h, sizeof(h));
 
 		if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data)) {
 			return (true);
