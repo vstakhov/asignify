@@ -37,6 +37,8 @@
 #ifndef _SHA2_H
 #define _SHA2_H
 
+#include <sys/types.h>
+#include <stdint.h>
 
 /*** SHA-256/384/512 Various Length Definitions ***********************/
 #define SHA256_BLOCK_LENGTH		64
@@ -50,33 +52,33 @@
 /*** SHA-224/256/384/512 Context Structure *******************************/
 typedef struct _SHA2_CTX {
 	union {
-		u_int32_t	st32[8];
-		u_int64_t	st64[8];
+		uint32_t	st32[8];
+		uint64_t	st64[8];
 	} state;
-	u_int64_t	bitcount[2];
-	u_int8_t	buffer[SHA512_BLOCK_LENGTH];
+	uint64_t	bitcount[2];
+	uint8_t	buffer[SHA512_BLOCK_LENGTH];
 } SHA2_CTX;
 
 __BEGIN_DECLS
 void SHA256Init(SHA2_CTX *);
-void SHA256Transform(u_int32_t state[8], const u_int8_t [SHA256_BLOCK_LENGTH]);
-void SHA256Update(SHA2_CTX *, const u_int8_t *, size_t);
+void SHA256Transform(uint32_t state[8], const uint8_t [SHA256_BLOCK_LENGTH]);
+void SHA256Update(SHA2_CTX *, const uint8_t *, size_t);
 void SHA256Pad(SHA2_CTX *);
-void SHA256Final(u_int8_t [SHA256_DIGEST_LENGTH], SHA2_CTX *);
+void SHA256Final(uint8_t [SHA256_DIGEST_LENGTH], SHA2_CTX *);
 char *SHA256End(SHA2_CTX *, char *);
 char *SHA256File(const char *, char *);
 char *SHA256FileChunk(const char *, char *, off_t, off_t);
-char *SHA256Data(const u_int8_t *, size_t, char *);
+char *SHA256Data(const uint8_t *, size_t, char *);
 
 void SHA512Init(SHA2_CTX *);
-void SHA512Transform(u_int64_t state[8], const u_int8_t [SHA512_BLOCK_LENGTH]);
-void SHA512Update(SHA2_CTX *, const u_int8_t *, size_t);
+void SHA512Transform(uint64_t state[8], const uint8_t [SHA512_BLOCK_LENGTH]);
+void SHA512Update(SHA2_CTX *, const uint8_t *, size_t);
 void SHA512Pad(SHA2_CTX *);
-void SHA512Final(u_int8_t [SHA512_DIGEST_LENGTH], SHA2_CTX *);
+void SHA512Final(uint8_t [SHA512_DIGEST_LENGTH], SHA2_CTX *);
 char *SHA512End(SHA2_CTX *, char *);
 char *SHA512File(const char *, char *);
 char *SHA512FileChunk(const char *, char *, off_t, off_t);
-char *SHA512Data(const u_int8_t *, size_t, char *);
+char *SHA512Data(const uint8_t *, size_t, char *);
 __END_DECLS
 
 #endif /* _SHA2_H */
