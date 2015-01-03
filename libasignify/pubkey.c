@@ -192,18 +192,7 @@ asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 	if (pk->version == 1) {
 		/* ED25519 */
 
-		/* XXX: implement detached sigs */
-		uint8_t *sigbuf, *dummybuf;
-		unsigned long long siglen, dummylen;
-
-		siglen = sig->data_len + dlen;
-		sigbuf = xmalloc(siglen);
-		dummybuf = xmalloc(siglen);
-		memcpy(sigbuf, sig->data, sig->data_len);
-		memcpy(sigbuf + sig->data_len, data, dlen);
-
-		if (crypto_sign_ed25519_open(dummybuf, &dummylen, sigbuf, siglen,
-			pk->data)) {
+		if (crypto_sign_ed25519_verify_detached(sig->data, data, dlen, pk->data)) {
 			return (true);
 		}
 	}
