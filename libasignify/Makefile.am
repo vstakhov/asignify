@@ -9,10 +9,9 @@ noinst_HEADERS=	khash.h \
 
 # Sources for libasignify
 libasignify_la_SOURCES =	tweetnacl.c \
-							blf.c \
 							blake2b-ref.c \
 							sha2.c \
-							bcrypt_pbkdf.c \
+							pbkdf2.c \
 							b64_pton.c \
 							pubkey.c \
 							verify.c \
