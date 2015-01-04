@@ -162,7 +162,7 @@ asignify_pubkey_load(FILE *f)
 				break;
 			}
 			else {
-				/* We can have either openbsd pubkey or some garbadge */
+				/* We can have either openbsd pubkey or some garbage */
 				if (!asignify_pubkey_try_obsd(buf, buflen, &res)) {
 					break;
 				}
@@ -194,16 +194,26 @@ asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 		return (false);
 	}
 
-	if (pk->version == 1) {
-		/* ED25519 */
-		blake2b_init(&hs, crypto_sign_HASHBYTES);
-		blake2b_update(&hs, sig->data, 32);
-		blake2b_update(&hs, pk->data, 32);
-		blake2b_update(&hs, data, dlen);
-		blake2b_final(&hs, h, sizeof(h));
+	if (pk->version == sig->version) {
+		switch (pk->version) {
+		case 0:
+		case 1:
+			if (pk->data_len == crypto_sign_PUBLICKEYBYTES &&
+					sig->data_len == crypto_sign_BYTES) {
+				/* ED25519 */
+				blake2b_init(&hs, crypto_sign_HASHBYTES);
+				blake2b_update(&hs, sig->data, 32);
+				blake2b_update(&hs, pk->data, 32);
+				blake2b_update(&hs, data, dlen);
+				blake2b_final(&hs, h, sizeof(h));
 
-		if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data)) {
-			return (true);
+				if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data)) {
+					return (true);
+				}
+			}
+			break;
+		default:
+			break;
 		}
 	}
 
