@@ -82,4 +82,10 @@ bool asignify_pubkey_check_signature_file(struct asignify_pubkey *pk,
 void asignify_pubkey_free(struct asignify_pubkey *pk);
 bool asignify_pubkey_write(struct asignify_pubkey *pk, FILE *f);
 
+/*
+ * Signature operations
+ */
+struct asignify_signature* asignify_signature_load(FILE *f);
+void asignify_signature_free(struct asignify_signature *sig);
+
 #endif /* ASIGNIFY_INTERNAL_H_ */
