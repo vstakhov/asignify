@@ -2,7 +2,6 @@ lib_LTLIBRARIES = libasignify.la
 
 noinst_HEADERS=	khash.h \
 	tweetnacl.h \
-	blf.h \
 	blake2.h \
 	blake2-impl.h \
 	asignify_internal.h 
