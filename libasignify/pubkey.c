@@ -181,6 +181,7 @@ asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 	struct asignify_signature *sig, const unsigned char *data, size_t dlen)
 {
 	blake2b_state hs;
+	SHA2_CTX sh;
 	unsigned char h[crypto_sign_HASHBYTES];
 
 	if (pk == NULL || sig == NULL) {
@@ -197,6 +198,19 @@ asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 	if (pk->version == sig->version) {
 		switch (pk->version) {
 		case 0:
+			if (pk->data_len == crypto_sign_PUBLICKEYBYTES &&
+					sig->data_len == crypto_sign_BYTES) {
+				SHA512Init(&sh);
+				SHA512Update(&sh, sig->data, 32);
+				SHA512Update(&sh, pk->data, 32);
+				SHA512Update(&sh, data, dlen);
+				SHA512Final(h, &sh);
+
+				if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data)) {
+					return (true);
+				}
+			}
+			break;
 		case 1:
 			if (pk->data_len == crypto_sign_PUBLICKEYBYTES &&
 					sig->data_len == crypto_sign_BYTES) {
