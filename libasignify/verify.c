@@ -212,7 +212,7 @@ asignify_verify_parse_files(struct asignify_verify_ctx *ctx, const char *data,
 				state = PARSE_FINISH;
 			}
 			else if (isspace(*p)) {
-				next_state = PARSE_ALG;
+				next_state = PARSE_START;
 				state = PARSE_SPACES;
 			}
 			else {
@@ -275,9 +275,10 @@ asignify_verify_parse_files(struct asignify_verify_ctx *ctx, const char *data,
 						else {
 							cur_file = xmalloc0(sizeof(*cur_file));
 							cur_file->fname = fbuf;
-							fbuf = NULL;
 							k = kh_put(asignify_verify_hnode, ctx->files,
-								fbuf, &r);
+								cur_file->fname, &r);
+							fbuf = NULL;
+
 							if (r == -1) {
 								state = PARSE_ERROR;
 							}
@@ -323,7 +324,7 @@ asignify_verify_parse_files(struct asignify_verify_ctx *ctx, const char *data,
 			}
 			break;
 		case PARSE_SPACES:
-			if (isspace(*p)) {
+			if (*p != '\0' && isspace(*p)) {
 				p ++;
 			}
 			else {
@@ -421,8 +422,12 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 			}
 
 			/* We are now safe to parse digests */
+			ctx->files = kh_init(asignify_verify_hnode);
 			if (!asignify_verify_parse_files(ctx, (const char *)data, dlen)) {
 				return (false);
+			}
+			else {
+				return (true);
 			}
 		}
 	}

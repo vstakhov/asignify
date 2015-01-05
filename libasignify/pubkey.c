@@ -206,7 +206,7 @@ asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 				SHA512Update(&sh, data, dlen);
 				SHA512Final(h, &sh);
 
-				if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data)) {
+				if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data) == 0) {
 					return (true);
 				}
 			}
@@ -229,7 +229,7 @@ asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 				blake2b_update(&hs, data, dlen);
 				blake2b_final(&hs, h, sizeof(h));
 
-				if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data)) {
+				if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data) == 0) {
 					return (true);
 				}
 			}
