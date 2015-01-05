@@ -13,6 +13,7 @@ libasignify_la_SOURCES =	tweetnacl.c \
 							sha2.c \
 							pbkdf2.c \
 							b64_pton.c \
+							databuf.c \
 							pubkey.c \
 							verify.c \
 							signature.c \

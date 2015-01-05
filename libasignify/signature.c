@@ -47,19 +47,13 @@ struct obsd_signature {
 	uint8_t sig[crypto_sign_ed25519_BYTES];
 };
 
-static void
-asignify_alloc_sig_fields(struct asignify_signature *sig)
-{
-	sig->data = xmalloc(sig->data_len);
-	sig->id = xmalloc(sig->id_len);
-}
 
 static bool
 asignify_sig_try_obsd(const char *buf, size_t buflen,
-	struct asignify_signature **sig)
+	struct asignify_public_data **sig)
 {
 	struct obsd_signature osig;
-	struct asignify_signature *res;
+	struct asignify_public_data *res;
 
 	if (buflen >= sizeof(OBSD_COMMENTHDR) - 1 &&
 			memcmp(buf, OBSD_COMMENTHDR, sizeof(OBSD_COMMENTHDR) - 1) == 0) {
@@ -78,7 +72,7 @@ asignify_sig_try_obsd(const char *buf, size_t buflen,
 			res->version = 0;
 			res->data_len = sizeof(osig.sig);
 			res->id_len = sizeof(osig.keynum);
-			asignify_alloc_sig_fields(res);
+			asignify_alloc_public_data_fields(res);
 			memcpy(res->data, osig.sig, res->data_len);
 			memcpy(res->id, osig.keynum, res->id_len);
 
@@ -89,60 +83,10 @@ asignify_sig_try_obsd(const char *buf, size_t buflen,
 	return (false);
 }
 
-/*
- * Native format is:
- * <PUBKEY_MAGIC>:<version>:<key_id>:<signature>
- */
-static struct asignify_signature*
-asignify_sig_load_native(const char *buf, size_t buflen)
-{
-	char *errstr;
-	const char *p = buf;
-	unsigned int version;
-	size_t remain = buflen, blen;
-	struct asignify_signature *res = NULL;
-
-	/* Skip PUBKEY_MAGIC and goto version */
-	p += sizeof(SIG_MAGIC) - 1;
-	remain -= sizeof(SIG_MAGIC) - 1;
-
-	version = strtoul(p, &errstr, 10);
-	if (errstr == NULL || *errstr != ':'
-			|| version == 0 || version > SIG_VER_MAX) {
-		return (NULL);
-	}
-
-	if (version == 1) {
-		res = xmalloc(sizeof(*res));
-		res->version = 1;
-		res->data_len = SIG_KEY_ID_LEN;
-		res->id_len = SIG_KEY_ID_LEN;
-		asignify_alloc_sig_fields(res);
-
-		/* Read ID */
-		blen = b64_pton_stop(p, res->id, res->id_len, ":");
-		if (blen != res->id_len || (p = strchr(p, ':')) == NULL) {
-			asignify_signature_free(res);
-			return (NULL);
-		}
-
-		p ++;
-
-		/* Read key */
-		blen = b64_pton_stop(p, res->data, res->data_len, "");
-		if (blen != res->data_len) {
-			asignify_signature_free(res);
-			return (NULL);
-		}
-	}
-
-	return (res);
-}
-
-struct asignify_signature*
+struct asignify_public_data*
 asignify_signature_load(FILE *f)
 {
-	struct asignify_signature *res = NULL;
+	struct asignify_public_data *res = NULL;
 	char *buf = NULL;
 	size_t buflen = 0;
 	bool first = true;
@@ -156,7 +100,10 @@ asignify_signature_load(FILE *f)
 			first = false;
 
 			if (memcmp(buf, SIG_MAGIC, sizeof(SIG_MAGIC) - 1) == 0) {
-				res = asignify_sig_load_native(buf, buflen);
+				res = asignify_public_data_load(buf, buflen,
+					SIG_MAGIC, sizeof(SIG_MAGIC) - 1,
+					SIG_VER_MAX, SIG_VER_MAX,
+					SIG_KEY_ID_LEN, SIG_LEN);
 				break;
 			}
 			else {
@@ -171,16 +118,4 @@ asignify_signature_load(FILE *f)
 	}
 
 	return (res);
-}
-
-void
-asignify_signature_free(struct asignify_signature *sig)
-{
-	if (sig) {
-		free(sig->data);
-		free(sig->id);
-		sig->data = NULL;
-		sig->id = NULL;
-		free(sig);
-	}
 }

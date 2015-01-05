@@ -59,7 +59,7 @@ KHASH_INIT(asignify_verify_hnode, const char *, struct asignify_verify_file *, 1
 	kh_str_hash_func, kh_str_hash_equal);
 
 struct asignify_verify_ctx {
-	struct asignify_pubkey *pk;
+	struct asignify_public_data *pk;
 	khash_t(asignify_verify_hnode) *files;
 	const char *error;
 };
@@ -390,7 +390,7 @@ asignify_verify_load_pubkey(asignify_verify_t *ctx, const char *pubf)
 bool
 asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 {
-	struct asignify_signature *sig;
+	struct asignify_public_data *sig;
 	unsigned char *data;
 	size_t dlen;
 	FILE *f;
@@ -418,11 +418,14 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 			}
 
 			if (!asignify_pubkey_check_signature(ctx->pk, sig, data, dlen)) {
+				asignify_public_data_free(sig);
 				return (false);
 			}
 
 			/* We are now safe to parse digests */
+			asignify_public_data_free(sig);
 			ctx->files = kh_init(asignify_verify_hnode);
+
 			if (!asignify_verify_parse_files(ctx, (const char *)data, dlen)) {
 				return (false);
 			}
@@ -528,7 +531,7 @@ asignify_verify_free(asignify_verify_t *ctx)
 	struct asignify_verify_file *f;
 
 	if (ctx) {
-		asignify_pubkey_free(ctx->pk);
+		asignify_public_data_free(ctx->pk);
 
 		for (k = kh_begin(ctx->files); k != kh_end(ctx->files); ++k) {
 			if (kh_exist(ctx->files, k)) {

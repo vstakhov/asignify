@@ -47,19 +47,12 @@ struct obsd_pubkey {
 	uint8_t pubkey[crypto_sign_ed25519_PUBLICKEYBYTES];
 };
 
-static void
-asignify_alloc_pkey_fields(struct asignify_pubkey *pk)
-{
-	pk->data = xmalloc(pk->data_len);
-	pk->id = xmalloc(pk->id_len);
-}
-
 static bool
 asignify_pubkey_try_obsd(const char *buf, size_t buflen,
-	struct asignify_pubkey **pk)
+	struct asignify_public_data **pk)
 {
 	struct obsd_pubkey opk;
-	struct asignify_pubkey *res;
+	struct asignify_public_data *res;
 
 	if (buflen >= sizeof(OBSD_COMMENTHDR) - 1 &&
 			memcmp(buf, OBSD_COMMENTHDR, sizeof(OBSD_COMMENTHDR) - 1) == 0) {
@@ -74,7 +67,7 @@ asignify_pubkey_try_obsd(const char *buf, size_t buflen,
 			res->version = 0;
 			res->data_len = sizeof(opk.pubkey);
 			res->id_len = sizeof(opk.keynum);
-			asignify_alloc_pkey_fields(res);
+			asignify_alloc_public_data_fields(res);
 			memcpy(res->data, opk.pubkey, res->data_len);
 			memcpy(res->id, opk.keynum, res->id_len);
 
@@ -90,60 +83,10 @@ asignify_pubkey_try_obsd(const char *buf, size_t buflen,
 	return (false);
 }
 
-/*
- * Native format is:
- * <PUBKEY_MAGIC>:<version>:<id>:<pkey>
- */
-static struct asignify_pubkey*
-asignify_pubkey_load_native(const char *buf, size_t buflen)
-{
-	char *errstr;
-	const char *p = buf;
-	unsigned int version;
-	size_t remain = buflen, blen;
-	struct asignify_pubkey *res = NULL;
-
-	/* Skip PUBKEY_MAGIC and goto version */
-	p += sizeof(PUBKEY_MAGIC) - 1;
-	remain -= sizeof(PUBKEY_MAGIC) - 1;
-
-	version = strtoul(p, &errstr, 10);
-	if (errstr == NULL || *errstr != ':'
-			|| version == 0 || version > PUBKEY_VER_MAX) {
-		return (NULL);
-	}
-
-	if (version == 1) {
-		res = xmalloc(sizeof(*res));
-		res->version = 1;
-		res->data_len = PUBKEY_ID_LEN;
-		res->id_len = PUBKEY_KEY_LEN;
-		asignify_alloc_pkey_fields(res);
-
-		/* Read ID */
-		blen = b64_pton_stop(p, res->id, res->id_len, ":");
-		if (blen != res->id_len || (p = strchr(p, ':')) == NULL) {
-			asignify_pubkey_free(res);
-			return (NULL);
-		}
-
-		p ++;
-
-		/* Read key */
-		blen = b64_pton_stop(p, res->data, res->data_len, "");
-		if (blen != res->data_len) {
-			asignify_pubkey_free(res);
-			return (NULL);
-		}
-	}
-
-	return (res);
-}
-
-struct asignify_pubkey*
+struct asignify_public_data*
 asignify_pubkey_load(FILE *f)
 {
-	struct asignify_pubkey *res = NULL;
+	struct asignify_public_data *res = NULL;
 	char *buf = NULL;
 	size_t buflen = 0;
 	bool first = true;
@@ -158,7 +101,10 @@ asignify_pubkey_load(FILE *f)
 
 			/* Check for asignify pubkey */
 			if (memcmp(buf, PUBKEY_MAGIC, sizeof(PUBKEY_MAGIC) - 1) == 0) {
-				res = asignify_pubkey_load_native(buf, buflen);
+				res = asignify_public_data_load(buf, buflen,
+					PUBKEY_MAGIC, sizeof(PUBKEY_MAGIC) - 1,
+					PUBKEY_VER_MAX, PUBKEY_VER_MAX,
+					PUBKEY_ID_LEN, PUBKEY_KEY_LEN);
 				break;
 			}
 			else {
@@ -177,8 +123,8 @@ asignify_pubkey_load(FILE *f)
 }
 
 bool
-asignify_pubkey_check_signature(struct asignify_pubkey *pk,
-	struct asignify_signature *sig, const unsigned char *data, size_t dlen)
+asignify_pubkey_check_signature(struct asignify_public_data *pk,
+	struct asignify_public_data *sig, const unsigned char *data, size_t dlen)
 {
 	blake2b_state hs;
 	SHA2_CTX sh;
@@ -242,20 +188,8 @@ asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 	return (false);
 }
 
-void
-asignify_pubkey_free(struct asignify_pubkey *pk)
-{
-	if (pk) {
-		free(pk->data);
-		free(pk->id);
-		pk->data = NULL;
-		pk->id = NULL;
-		free(pk);
-	}
-}
-
 bool
-asignify_pubkey_write(struct asignify_pubkey *pk, FILE *f)
+asignify_pubkey_write(struct asignify_public_data *pk, FILE *f)
 {
 	char *b64data, *b64id;
 	bool ret = false;

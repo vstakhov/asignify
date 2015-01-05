@@ -31,15 +31,7 @@
 
 #define OBSD_COMMENTHDR "untrusted comment: "
 
-struct asignify_pubkey {
-	unsigned char *data;
-	size_t data_len;
-	unsigned char *id;
-	size_t id_len;
-	unsigned int version;
-};
-
-struct asignify_signature {
+struct asignify_public_data {
 	unsigned char *data;
 	size_t data_len;
 	unsigned char *id;
@@ -83,18 +75,26 @@ enum asignify_error {
 const char * xerr_string(enum asignify_error code);
 
 /*
+ * Common public data operations
+ */
+void asignify_alloc_public_data_fields(struct asignify_public_data *pk);
+struct asignify_public_data* asignify_public_data_load(const char *buf,
+	size_t buflen, const char *magic,
+	size_t magiclen, unsigned int ver_min, unsigned int ver_max,
+	unsigned int id_len, unsigned int data_len);
+void asignify_public_data_free(struct asignify_public_data *d);
+
+/*
  * Pubkey operations
  */
-struct asignify_pubkey* asignify_pubkey_load(FILE *f);
-bool asignify_pubkey_check_signature(struct asignify_pubkey *pk,
-	struct asignify_signature *sig, const unsigned char *data, size_t dlen);
-void asignify_pubkey_free(struct asignify_pubkey *pk);
-bool asignify_pubkey_write(struct asignify_pubkey *pk, FILE *f);
+struct asignify_public_data* asignify_pubkey_load(FILE *f);
+bool asignify_pubkey_check_signature(struct asignify_public_data *pk,
+	struct asignify_public_data *sig, const unsigned char *data, size_t dlen);
+bool asignify_pubkey_write(struct asignify_public_data *pk, FILE *f);
 
 /*
  * Signature operations
  */
-struct asignify_signature* asignify_signature_load(FILE *f);
-void asignify_signature_free(struct asignify_signature *sig);
+struct asignify_public_data* asignify_signature_load(FILE *f);
 
 #endif /* ASIGNIFY_INTERNAL_H_ */
