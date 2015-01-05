@@ -63,6 +63,15 @@ AC_CHECK_HEADERS_ONCE([bsd/readpassphrase.h])
 AC_CHECK_HEADERS_ONCE([bsd/libutil.h])
 AC_CHECK_HEADERS_ONCE([bsd/err.h])
 
+AC_CHECK_DECL([O_NOFOLLOW],
+        AC_DEFINE([HAVE_O_NOFOLLOW], [1], [Use O_NOFOLLOW for open]),
+        [],
+        [#include <sys/types.h>
+         #include <sys/stat.h>
+         #include <fcntl.h>
+     	]
+)
+
 AC_CHECK_FUNCS([explicit_bzero memset_s])
 AC_MSG_CHECKING(if weak symbols are supported)
 AC_LINK_IFELSE([AC_LANG_PROGRAM([[
