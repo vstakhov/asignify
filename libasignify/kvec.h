@@ -60,10 +60,21 @@ int main() {
 #define kv_size(v) ((v).n)
 #define kv_max(v) ((v).m)
 
-#define kv_resize(type, v, s)  ((v).m = (s), (v).a = (type*)realloc((v).a, sizeof(type) * (v).m))
+#define xrealloc(type, p,l) do {											\
+		(p) = (type*)realloc((p), (l));										\
+		if ((p) == NULL) {													\
+			abort();														\
+		}																	\
+	} while (0)
+
+#define kv_resize(type, v, s)  ((v).m = (s), xrealloc(type, (v).a, sizeof(type) * (v).m))
 #define kv_grow_factor 1.5
 #define kv_grow(type, v)  ((v).m = ((v).m > 1 ? (v).m * kv_grow_factor : 2), \
-		(v).a = (type*)realloc((v).a, sizeof(type) * (v).m))
+		xrealloc(type, (v).a, sizeof(type) * (v).m))
+#define kv_reserve(type, v, c)  do {										\
+		((v).m = ((v).m + (c)) * kv_grow_factor); 							\
+		xrealloc(type, (v).a, sizeof(type) * (v).m);						\
+	} while (0)
 
 #define kv_copy(type, v1, v0) do {											\
 		if ((v1).m < (v0).n) kv_resize(type, v1, (v0).n);					\
@@ -78,11 +89,19 @@ int main() {
 		(v).a[(v).n++] = (x);												\
 	} while (0)
 
+#define kv_push_a(type, v, x, c) do {										\
+		while ((v).m <= ((v).n + (c))) {									\
+			kv_reserve(type, v, c);											\
+		}																	\
+		memcpy(&(v).a[(v).n], (x), (c) * sizeof(type));						\
+		(v).n += (c);														\
+	} while (0)
+
 #define kv_prepend(type, v, x) do {											\
 	if ((v).n == (v).m) {													\
 		kv_grow(type, v);													\
 	}																		\
-	memmove((v).a + 1, (v).a, sizeof(type) * (v).n);							\
+	memmove((v).a + 1, (v).a, sizeof(type) * (v).n);						\
 	(v).a[0] = (x);															\
 	(v).n ++;																\
 } while (0)
