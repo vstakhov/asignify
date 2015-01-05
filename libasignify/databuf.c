@@ -362,6 +362,19 @@ asignify_private_key_is_sane(struct asignify_private_key *privk)
 	return (false);
 }
 
+static void
+asignify_pkey_to_private_data(struct asignify_private_key *privk,
+		struct asignify_private_data *priv)
+{
+	priv->data = xmalloc(crypto_sign_SECRETKEYBYTES);
+	priv->data_len = crypto_sign_SECRETKEYBYTES;
+	memcpy(priv->data, privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
+	explicit_memzero(privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
+	priv->id = xmalloc(KEY_ID_LEN);
+	priv->id_len = KEY_ID_LEN;
+	memcpy(priv->id, privk->id, KEY_ID_LEN);
+}
+
 struct asignify_private_data*
 asignify_private_data_unpack_key(struct asignify_private_key *privk,
 	asignify_password_cb password_cb, void *d)
@@ -419,22 +432,10 @@ asignify_private_data_unpack_key(struct asignify_private_key *privk,
 			free(priv);
 			return (NULL);
 		}
-		priv->data = xmalloc(crypto_sign_SECRETKEYBYTES);
-		priv->data_len = crypto_sign_SECRETKEYBYTES;
-		memcpy(priv->data, privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
-		explicit_memzero(privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
-		priv->id = xmalloc(KEY_ID_LEN);
-		priv->id_len = KEY_ID_LEN;
-		memcpy(priv->id, privk->id, KEY_ID_LEN);
+		asignify_pkey_to_private_data(privk, priv);
 	}
 	else {
-		priv->data = xmalloc(crypto_sign_SECRETKEYBYTES);
-		priv->data_len = crypto_sign_SECRETKEYBYTES;
-		memcpy(priv->data, privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
-		explicit_memzero(privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
-		priv->id = xmalloc(KEY_ID_LEN);
-		priv->id_len = KEY_ID_LEN;
-		memcpy(priv->id, privk->id, KEY_ID_LEN);
+		asignify_pkey_to_private_data(privk, priv);
 	}
 
 	asignify_privkey_cleanup(privk);
