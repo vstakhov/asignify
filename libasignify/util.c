@@ -156,3 +156,59 @@ xerr_string(enum asignify_error code)
 
 	return (err_str[code]);
 }
+
+
+int
+hex2bin(unsigned char * const bin, const size_t bin_maxlen,
+    const char * const hex, const size_t hex_len,
+    size_t * const bin_len, const char ** const hex_end)
+{
+	size_t bin_pos = (size_t) 0U;
+	size_t hex_pos = (size_t) 0U;
+	int ret = 0;
+	unsigned char c;
+	unsigned char c_acc = 0U;
+	unsigned char c_num;
+	unsigned char c_val;
+	unsigned char state = 0U;
+
+	while (hex_pos < hex_len) {
+		c = (unsigned char) hex[hex_pos];
+		if ((c_num = c ^ 48U) < 10U) {
+			c_val = c_num;
+		}
+		else if ((c_num = (c & ~32U)) > 64 && c_num < 71U) {
+			c_val = c_num - 55U;
+		}
+		else {
+			break;
+		}
+		if (bin_pos >= bin_maxlen) {
+			ret = -1;
+			errno = ERANGE;
+			break;
+		}
+		if (state == 0U) {
+			c_acc = c_val * 16U;
+		}
+		else {
+			bin[bin_pos++] = c_acc | c_val;
+		}
+		state = ~state;
+		hex_pos++;
+	}
+
+	if (state != 0U) {
+		hex_pos--;
+	}
+
+	if (hex_end != NULL) {
+		*hex_end = &hex[hex_pos];
+	}
+
+	if (bin_len != NULL) {
+		*bin_len = bin_pos;
+	}
+
+	return ret;
+}

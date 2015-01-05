@@ -57,6 +57,10 @@ int b64_pton_stop(char const *src, unsigned char *target, size_t targsize, const
 int b64_ntop(unsigned char *src, size_t srclength, char *target,
 	size_t targsize);
 
+int hex2bin(unsigned char * const bin, const size_t bin_maxlen,
+    const char * const hex, const size_t hex_len,
+    size_t * const bin_len, const char ** const hex_end);
+
 enum asignify_error {
 	ASIGNIFY_ERROR_OK = 0,
 	ASIGNIFY_ERROR_NO_PUBKEY,
