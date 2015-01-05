@@ -216,8 +216,15 @@ asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 					sig->data_len == crypto_sign_BYTES) {
 				/* ED25519 */
 				blake2b_init(&hs, crypto_sign_HASHBYTES);
+				/* ed25519 nonce */
 				blake2b_update(&hs, sig->data, 32);
-				blake2b_update(&hs, pk->data, 32);
+				/* public key */
+				blake2b_update(&hs, pk->data, pk->data_len);
+				/* version to prevent versioning attacks */
+				blake2b_update(&hs, sig->version, sizeof(sig->version));
+				/* id of key */
+				blake2b_update(&hs, pk->id, pk->id_len);
+				/* data part */
 				blake2b_update(&hs, data, dlen);
 				blake2b_final(&hs, h, sizeof(h));
 
@@ -228,50 +235,6 @@ asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 			break;
 		default:
 			break;
-		}
-	}
-
-	return (false);
-}
-
-bool asignify_pubkey_check_signature_file(struct asignify_pubkey *pk,
-	struct asignify_signature *sig, FILE *f)
-{
-	blake2b_state hs;
-	unsigned char h[crypto_sign_HASHBYTES];
-#if BUFSIZ >= 2048
-	unsigned char buf[BUFSIZ];
-#else
-	/* BUFSIZ is insanely small */
-	unsigned char buf[4096];
-#endif
-	int r;
-
-	if (pk == NULL || sig == NULL) {
-		return (false);
-	}
-
-	/* Check sanity */
-	if (pk->version != sig->version ||
-			pk->id_len != sig->id_len ||
-			memcmp(pk->id, sig->id, sig->id_len) != 0) {
-		return (false);
-	}
-
-	if (pk->version == 1) {
-		/* ED25519 */
-		blake2b_init(&hs, crypto_sign_HASHBYTES);
-		blake2b_update(&hs, sig->data, 32);
-		blake2b_update(&hs, pk->data, 32);
-
-		while ((r = fread(buf, 1, sizeof(buf), f)) > 0) {
-			blake2b_update(&hs, buf, r);
-		}
-
-		blake2b_final(&hs, h, sizeof(h));
-
-		if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data)) {
-			return (true);
 		}
 	}
 
