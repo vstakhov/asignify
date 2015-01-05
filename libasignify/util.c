@@ -33,10 +33,14 @@
 
 #ifdef HAVE_OPENSSL
 #include <openssl/rand.h>
+#include <openssl/evp.h>
 #endif
 #ifdef HAVE_BSD_STDLIB_H
 #include <bsd/stdlib.h>
 #endif
+
+#include "sha2.h"
+#include "blake2.h"
 
 #include "asignify_internal.h"
 
@@ -211,4 +215,27 @@ hex2bin(unsigned char * const bin, const size_t bin_maxlen,
 	}
 
 	return ret;
+}
+
+unsigned int
+asignify_digest_len(enum asignify_digest_type type)
+{
+	unsigned int ret;
+
+	switch(type) {
+	case ASIGNIFY_DIGEST_SHA512:
+		ret = SHA512_DIGEST_LENGTH;
+		break;
+	case ASIGNIFY_DIGEST_SHA256:
+		ret = SHA256_DIGEST_LENGTH;
+		break;
+	case ASIGNIFY_DIGEST_BLAKE2:
+		ret = BLAKE2B_OUTBYTES;
+		break;
+	default:
+		ret = 0;
+		break;
+	}
+
+	return (ret);
 }

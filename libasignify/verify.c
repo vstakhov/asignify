@@ -120,29 +120,6 @@ asignify_verify_parse_digest_type(const char *data, ssize_t dlen)
 	return (ASIGNIFY_DIGEST_MAX);
 }
 
-static unsigned int
-asignify_digest_len(enum asignify_digest_type type)
-{
-	unsigned int ret;
-
-	switch(type) {
-	case ASIGNIFY_DIGEST_SHA512:
-		ret = SHA512_DIGEST_LENGTH;
-		break;
-	case ASIGNIFY_DIGEST_SHA256:
-		ret = SHA256_DIGEST_LENGTH;
-		break;
-	case ASIGNIFY_DIGEST_BLAKE2:
-		ret = BLAKE2B_OUTBYTES;
-		break;
-	default:
-		ret = 0;
-		break;
-	}
-
-	return (ret);
-}
-
 static bool
 asignify_verify_parse_digest(const char *data, ssize_t dlen,
 	enum asignify_digest_type type, struct asignify_verify_file *f)

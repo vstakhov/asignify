@@ -27,6 +27,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "asignify.h"
+
 #define OBSD_COMMENTHDR "untrusted comment: "
 
 struct asignify_pubkey {
@@ -60,6 +62,8 @@ int b64_ntop(unsigned char *src, size_t srclength, char *target,
 int hex2bin(unsigned char * const bin, const size_t bin_maxlen,
     const char * const hex, const size_t hex_len,
     size_t * const bin_len, const char ** const hex_end);
+
+unsigned int asignify_digest_len(enum asignify_digest_type type);
 
 enum asignify_error {
 	ASIGNIFY_ERROR_OK = 0,
