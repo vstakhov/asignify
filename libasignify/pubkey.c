@@ -221,7 +221,8 @@ asignify_pubkey_check_signature(struct asignify_pubkey *pk,
 				/* public key */
 				blake2b_update(&hs, pk->data, pk->data_len);
 				/* version to prevent versioning attacks */
-				blake2b_update(&hs, sig->version, sizeof(sig->version));
+				blake2b_update(&hs, (const uint8_t *)&sig->version,
+					sizeof(sig->version));
 				/* id of key */
 				blake2b_update(&hs, pk->id, pk->id_len);
 				/* data part */
