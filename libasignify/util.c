@@ -102,10 +102,14 @@ randombytes(unsigned char *buf, uint64_t len)
 
 
 FILE *
-xopen(const char *fname, const char *mode)
+xfopen(const char *fname, const char *mode)
 {
 	struct stat sb;
 	FILE *res = NULL;
+
+	if (fname == NULL || mode == NULL) {
+		return (NULL);
+	}
 
 	if (strcmp(fname, "-") == 0) {
 		if (strchr(mode, 'w') != NULL) {
