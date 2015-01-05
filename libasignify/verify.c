@@ -34,6 +34,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <ctype.h>
+#include <fcntl.h>
 
 #include "blake2.h"
 #include "sha2.h"
@@ -432,6 +433,74 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 bool
 asignify_verify_file(asignify_verify_t *ctx, const char *checkf)
 {
+	khiter_t k;
+	struct stat st;
+	int fd, check;
+	struct asignify_verify_file *f;
+	struct asignify_verify_digest *d;
+	unsigned char *calc_digest;
+
+	if (ctx == NULL || ctx->files == NULL) {
+		if (ctx) {
+			ctx->error = xerr_string(ASIGNIFY_ERROR_MISUSE);
+		}
+		return (false);
+	}
+
+	k = kh_get(asignify_verify_hnode, ctx->files, checkf);
+
+	if (k != kh_end(ctx->files)) {
+#ifdef HAVE_O_NOFOLLOW
+		fd = open(checkf, O_RDONLY|O_NOFOLLOW);
+#else
+		fd = open(checkf, O_RDONLY);
+#endif
+		if (fd == -1) {
+			ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+			return (false);
+		}
+
+		f = kh_value(ctx->files, k);
+
+		if (fstat(fd, &st) == -1 || S_ISDIR(st.st_mode)) {
+			close(fd);
+			ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+			return (false);
+		}
+
+		if (f->size > 0 && f->size != st.st_size) {
+			close(fd);
+			return (false);
+		}
+
+		d = f->digests;
+		while (d) {
+			calc_digest = asignify_digest_fd(d->digest_type, fd);
+
+			if (calc_digest == NULL) {
+				close(fd);
+				ctx->error = xerr_string(ASIGNIFY_ERROR_SIZE);
+				return (false);
+			}
+			else {
+				check = memcmp(calc_digest, d->digest,
+					asignify_digest_len(d->digest_type));
+				free(calc_digest);
+
+				if (check != 0) {
+					ctx->error = xerr_string(ASIGNIFY_ERROR_VERIFY_DIGEST);
+					close(fd);
+					return (false);
+				}
+			}
+			d = d->next;
+		}
+
+		close(fd);
+
+		return (true);
+	}
+
 	return (false);
 }
 

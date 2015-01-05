@@ -51,7 +51,9 @@ const char* err_str[ASIGNIFY_ERROR_MAX] = {
 	[ASIGNIFY_ERROR_FILE] = "File IO error",
 	[ASIGNIFY_ERROR_FORMAT] = "Incorrect data format",
 	[ASIGNIFY_ERROR_MISUSE] = "Library is used incorrectly",
-	[ASIGNIFY_ERROR_VERIFY] = "Signature verification error"
+	[ASIGNIFY_ERROR_VERIFY] = "Signature verification error",
+	[ASIGNIFY_ERROR_VERIFY_DIGEST] = "Digest verification error",
+	[ASIGNIFY_ERROR_SIZE] = "Size missmatch"
 };
 
 #ifdef HAVE_WEAK_SYMBOLS
