@@ -64,6 +64,7 @@ int hex2bin(unsigned char * const bin, const size_t bin_maxlen,
     size_t * const bin_len, const char ** const hex_end);
 
 unsigned int asignify_digest_len(enum asignify_digest_type type);
+unsigned char* asignify_digest_fd(enum asignify_digest_type type, int fd);
 
 enum asignify_error {
 	ASIGNIFY_ERROR_OK = 0,

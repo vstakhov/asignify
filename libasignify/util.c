@@ -25,11 +25,13 @@
 #include "config.h"
 #endif
 
+#include <sys/types.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #ifdef HAVE_OPENSSL
 #include <openssl/rand.h>
@@ -238,4 +240,172 @@ asignify_digest_len(enum asignify_digest_type type)
 	}
 
 	return (ret);
+}
+
+static void *
+asignify_digest_init(enum asignify_digest_type type)
+{
+#ifdef HAVE_OPENSSL
+	EVP_MD_CTX *mdctx;
+#else
+	SHA2_CTX *st;
+#endif
+	blake2b_state *bst;
+
+	void *res = NULL;
+
+	switch(type) {
+	case ASIGNIFY_DIGEST_SHA512:
+#ifdef HAVE_OPENSSL
+		mdctx = EVP_MD_CTX_create();
+		EVP_DigestInit_ex(mdctx, EVP_sha512(), NULL);
+		res = mdctx;
+#else
+		st = xmalloc(sizeof(*st));
+		SHA512Init(&st);
+		res = st;
+#endif
+		break;
+	case ASIGNIFY_DIGEST_SHA256:
+#ifdef HAVE_OPENSSL
+		mdctx = EVP_MD_CTX_create();
+		EVP_DigestInit(mdctx, EVP_sha256());
+		res = mdctx;
+#else
+		st = xmalloc(sizeof(*st));
+		SHA256Init(&st);
+		res = st;
+#endif
+		break;
+	case ASIGNIFY_DIGEST_BLAKE2:
+		bst = xmalloc(sizeof(*bst));
+		blake2b_init(bst, BLAKE2B_OUTBYTES);
+		res = bst;
+		break;
+	default:
+		abort();
+		break;
+	}
+
+	return (res);
+}
+
+static void
+asignify_digest_update(enum asignify_digest_type type, void *ctx,
+	const unsigned char *buf, size_t len)
+{
+#ifdef HAVE_OPENSSL
+	EVP_MD_CTX *mdctx;
+#else
+	SHA2_CTX *st;
+#endif
+	blake2b_state *bst;
+
+	switch(type) {
+		case ASIGNIFY_DIGEST_SHA512:
+#ifdef HAVE_OPENSSL
+			mdctx = (EVP_MD_CTX *)ctx;
+			EVP_DigestUpdate(mdctx, buf, len);
+#else
+			st = (SHA2_CTX *)ctx;
+			SHA512Update(ctx, buf, len);
+#endif
+			break;
+		case ASIGNIFY_DIGEST_SHA256:
+#ifdef HAVE_OPENSSL
+			mdctx = (EVP_MD_CTX *)ctx;
+			EVP_DigestUpdate(mdctx, buf, len);
+#else
+			st = (SHA2_CTX *)ctx;
+			SHA256Update(ctx, buf, len);
+#endif
+			break;
+		case ASIGNIFY_DIGEST_BLAKE2:
+			bst = (blake2b_state *)ctx;
+			blake2b_update(bst, buf, len);
+			break;
+		default:
+			abort();
+			break;
+	}
+
+}
+
+static unsigned char*
+asignify_digest_final(enum asignify_digest_type type, void *ctx)
+{
+	unsigned int len = asignify_digest_len(type);
+	unsigned char *res;
+#ifdef HAVE_OPENSSL
+	EVP_MD_CTX *mdctx;
+#else
+	SHA2_CTX *st;
+#endif
+	blake2b_state *bst;
+
+	res = xmalloc(len);
+	switch(type) {
+		case ASIGNIFY_DIGEST_SHA512:
+#ifdef HAVE_OPENSSL
+			mdctx = (EVP_MD_CTX *)ctx;
+			EVP_DigestFinal(mdctx, res, &len);
+			EVP_MD_CTX_destroy(mdctx);
+#else
+			st = (SHA2_CTX *)ctx;
+			SHA512Final(res, st);
+			free(st);
+#endif
+			break;
+		case ASIGNIFY_DIGEST_SHA256:
+#ifdef HAVE_OPENSSL
+			mdctx = (EVP_MD_CTX *)ctx;
+			EVP_DigestFinal(mdctx, res, &len);
+			EVP_MD_CTX_destroy(mdctx);
+#else
+			st = (SHA2_CTX *)ctx;
+			SHA256Final(res, st);
+			free(st);
+#endif
+			break;
+		case ASIGNIFY_DIGEST_BLAKE2:
+			bst = (blake2b_state *)ctx;
+			blake2b_final(bst, res, len);
+			free(bst);
+			break;
+		default:
+			abort();
+			break;
+	}
+
+	return (res);
+}
+
+unsigned char*
+asignify_digest_fd(enum asignify_digest_type type, int fd)
+{
+	int r;
+#if BUFSIZ >= 2048
+	unsigned char buf[BUFSIZ];
+#else
+	/* BUFSIZ is insanely small */
+	unsigned char buf[4096];
+#endif
+	void *dgst;
+
+	if (fd == -1 || type >= ASIGNIFY_DIGEST_SIZE ||
+			(dgst = asignify_digest_init(type)) == NULL) {
+		return (NULL);
+	}
+
+	if (lseek(fd, 0, SEEK_SET) == (off_t)-1) {
+		/* XXX: not correct if openssl is used */
+		free(dgst);
+		return (NULL);
+	}
+
+	while ((r = read(fd, buf, sizeof(buf))) > 0) {
+		asignify_digest_update(type, dgst, buf, r);
+	}
+
+	return (asignify_digest_final(type, dgst));
 }
