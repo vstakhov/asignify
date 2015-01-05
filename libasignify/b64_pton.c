@@ -281,9 +281,14 @@ b64_pton_stop(char const *src, unsigned char *target, size_t targsize,
 			 * We know this char is an =.  Is there anything but
 			 * whitespace after it?
 			 */
-			for (;; ch = (unsigned char)*src++)
-				if (!isspace(ch) && memchr(stop, ch, slen) == NULL)
+			for (;; ch = (unsigned char)*src++) {
+				if (memchr(stop, ch, slen) != NULL) {
+					break;
+				}
+				else if (!isspace(ch)) {
 					return (-1);
+				}
+			}
 
 			/*
 			 * Now make sure for cases 2 and 3 that the "extra"
