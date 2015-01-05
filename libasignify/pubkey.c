@@ -38,7 +38,6 @@
 #define PUBKEY_MAGIC "asignify-pubkey:"
 #define OBSD_PKALG "Ed"
 #define PUBKEY_VER_MAX 1
-#define PUBKEY_ID_LEN 8
 #define PUBKEY_KEY_LEN crypto_sign_ed25519_PUBLICKEYBYTES
 
 struct obsd_pubkey {
@@ -104,7 +103,7 @@ asignify_pubkey_load(FILE *f)
 				res = asignify_public_data_load(buf, buflen,
 					PUBKEY_MAGIC, sizeof(PUBKEY_MAGIC) - 1,
 					PUBKEY_VER_MAX, PUBKEY_VER_MAX,
-					PUBKEY_ID_LEN, PUBKEY_KEY_LEN);
+					KEY_ID_LEN, PUBKEY_KEY_LEN);
 				break;
 			}
 			else {

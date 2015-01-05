@@ -30,6 +30,21 @@
 #include "asignify.h"
 
 #define OBSD_COMMENTHDR "untrusted comment: "
+#define PRIVKEY_MAGIC "signify-private-key"
+#define PBKDF_MINROUNDS 42
+#define KEY_ID_LEN 8
+#define SALT_LEN 16
+#define PBKDF_ALG "pbkdf2-blake2"
+
+#if defined(__GNUC__)  && __GNUC__ >= 4
+#define STRUCT_OFFSET(struct_type, member)						\
+      ((long) offsetof(struct_type, member))
+#else
+#define STRUCT_OFFSET(struct_type, member)						\
+      ((long)((unsigned char*) &((struct_type*) 0)->member))
+#endif
+#define STRUCT_MEMBER_PTR(member_type, struct_p, struct_offset)   \
+    ((member_type*)((void *)((unsigned char*)(struct_p) + (long)(struct_offset))))
 
 struct asignify_public_data {
 	unsigned char *data;
@@ -39,8 +54,29 @@ struct asignify_public_data {
 	unsigned int version;
 };
 
+struct asignify_private_data {
+	unsigned char *data;
+	size_t data_len;
+	unsigned char *id;
+	size_t id_len;
+	unsigned int version;
+};
+
+struct asignify_private_key {
+	unsigned int version;
+	char *pbkdf_alg;
+	unsigned int rounds;
+	unsigned char *salt;
+	unsigned char *checksum;
+	unsigned char *id;
+	unsigned char *encrypted_blob;
+};
+
 void explicit_memzero(void * const pnt, const size_t len);
 void randombytes(unsigned char *buf, uint64_t len);
+
+int pkcs5_pbkdf2(const char *pass, size_t pass_len, const uint8_t *salt,
+    size_t salt_len, uint8_t *key, size_t key_len, unsigned int rounds);
 
 FILE * xfopen(const char *fname, const char *mode);
 void * xmalloc(size_t len);
@@ -83,6 +119,13 @@ struct asignify_public_data* asignify_public_data_load(const char *buf,
 	size_t magiclen, unsigned int ver_min, unsigned int ver_max,
 	unsigned int id_len, unsigned int data_len);
 void asignify_public_data_free(struct asignify_public_data *d);
+
+/*
+ * Common secret data operations
+ */
+struct asignify_private_data* asignify_private_data_load(FILE *f,
+	asignify_password_cb password_cb, void *d);
+void asignify_private_data_free(struct asignify_private_data *d);
 
 /*
  * Pubkey operations

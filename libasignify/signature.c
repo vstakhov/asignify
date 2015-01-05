@@ -38,7 +38,6 @@
 #define SIG_MAGIC "asignify-sig:"
 #define OBSD_SIGALG "Ed"
 #define SIG_VER_MAX 1
-#define SIG_KEY_ID_LEN 8
 #define SIG_LEN crypto_sign_ed25519_BYTES
 
 struct obsd_signature {
@@ -103,7 +102,7 @@ asignify_signature_load(FILE *f)
 				res = asignify_public_data_load(buf, buflen,
 					SIG_MAGIC, sizeof(SIG_MAGIC) - 1,
 					SIG_VER_MAX, SIG_VER_MAX,
-					SIG_KEY_ID_LEN, SIG_LEN);
+					KEY_ID_LEN, SIG_LEN);
 				break;
 			}
 			else {
