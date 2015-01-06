@@ -67,10 +67,17 @@ int main() {
 		}																	\
 	} while (0)
 
-#define kv_resize(type, v, s)  ((v).m = (s), xrealloc(type, (v).a, sizeof(type) * (v).m))
+#define kv_resize(type, v, s)  do {											\
+		(v).m = (s);														\
+		xrealloc(type, (v).a, sizeof(type) * (v).m));						\
+	} while (0)
+
 #define kv_grow_factor 1.5
-#define kv_grow(type, v)  ((v).m = ((v).m > 1 ? (v).m * kv_grow_factor : 2), \
-		xrealloc(type, (v).a, sizeof(type) * (v).m))
+#define kv_grow(type, v) do {												\
+		(v).m = ((v).m > 1 ? (v).m * kv_grow_factor : 2); 					\
+		xrealloc(type, (v).a, sizeof(type) * (v).m);						\
+	} while (0)
+
 #define kv_reserve(type, v, c)  do {										\
 		((v).m = ((v).m + (c)) * kv_grow_factor); 							\
 		xrealloc(type, (v).a, sizeof(type) * (v).m);						\
