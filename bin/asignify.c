@@ -121,7 +121,7 @@ main(int argc, char **argv)
 	} verb = NONE;
 
 
-	rounds = 42;
+	rounds = PBKDF_MINROUNDS * 5;
 
 	while ((ch = getopt(argc, argv, "CGSVuc:em:np:qr:s:x:")) != -1) {
 		switch (ch) {
@@ -163,6 +163,9 @@ main(int argc, char **argv)
 			break;
 		case 'r':
 			rounds = strtoul(optarg, NULL, 10);
+			if (rounds < PBKDF_MINROUNDS) {
+				errx(1, "too few pbkdf rounds");
+			}
 			break;
 		case 's':
 			seckeyfile = optarg;

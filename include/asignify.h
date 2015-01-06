@@ -28,6 +28,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#define PBKDF_MINROUNDS 10000
 
 #if defined(__cplusplus)
 extern "C" {

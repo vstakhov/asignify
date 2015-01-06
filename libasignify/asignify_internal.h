@@ -31,7 +31,6 @@
 
 #define OBSD_COMMENTHDR "untrusted comment: "
 #define PRIVKEY_MAGIC "asignify-private-key"
-#define PBKDF_MINROUNDS 42
 #define KEY_ID_LEN 8
 #define SALT_LEN 16
 #define PBKDF_ALG "pbkdf2-blake2"
