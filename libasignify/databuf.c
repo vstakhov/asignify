@@ -138,8 +138,8 @@ asignify_public_data_load(const char *buf, size_t buflen, const char *magic,
 		return (NULL);
 	}
 
-	p += magiclen - 1;
-	remain -= magiclen - 1;
+	p += magiclen;
+	remain -= magiclen;
 
 	version = strtoul(p, &errstr, 10);
 	if (errstr == NULL || *errstr != ':'
@@ -149,11 +149,12 @@ asignify_public_data_load(const char *buf, size_t buflen, const char *magic,
 
 	res = xmalloc(sizeof(*res));
 	res->version = 1;
-	res->data_len = id_len;
-	res->id_len = data_len;
+	res->data_len = data_len;
+	res->id_len = id_len;
 	asignify_alloc_public_data_fields(res);
 
 	/* Read ID */
+	p = errstr + 1;
 	blen = b64_pton_stop(p, res->id, res->id_len, ":");
 	if (blen != res->id_len || (p = strchr(p, ':')) == NULL) {
 		asignify_public_data_free(res);
