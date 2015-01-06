@@ -91,6 +91,12 @@ const static struct asignify_privkey_parser parser_fields[] = {
 		.field_type = PRIVKEY_FIELD_HEX,
 		.struct_offset = STRUCT_OFFSET(struct asignify_private_key, salt),
 		.required_len = SALT_LEN
+	},
+	{
+		.field_name = "version",
+		.field_type = PRIVKEY_FIELD_UINT,
+		.struct_offset = STRUCT_OFFSET(struct asignify_private_key, version),
+		.required_len = 0
 	}
 };
 
@@ -301,9 +307,6 @@ asignify_private_data_parse_line(const char *buf, size_t buflen,
 			if (parser == NULL) {
 				state = PARSE_ERROR;
 			}
-			else if (parser->field_type == PRIVKEY_FIELD_UINT && !isdigit(*p)) {
-				state = PARSE_ERROR;
-			}
 			else if (*p == '\n') {
 				if (!asignify_private_data_parse_value(c, p - c, parser, privk)) {
 					state = PARSE_ERROR;
@@ -312,6 +315,13 @@ asignify_private_data_parse_line(const char *buf, size_t buflen,
 					state = PARSE_SPACES;
 					next_state = PARSE_NAME;
 				}
+				parser = NULL;
+			}
+			else if (parser->field_type == PRIVKEY_FIELD_UINT && !isdigit(*p)) {
+				state = PARSE_ERROR;
+			}
+			else if (parser->field_type == PRIVKEY_FIELD_HEX && !isxdigit(*p)) {
+				state = PARSE_ERROR;
 			}
 			else {
 				p ++;
@@ -324,7 +334,6 @@ asignify_private_data_parse_line(const char *buf, size_t buflen,
 			else {
 				c = p;
 				state = next_state;
-				parser = NULL;
 			}
 			break;
 		case PARSE_ERROR:
@@ -450,10 +459,11 @@ asignify_private_data_load(FILE *f, asignify_password_cb password_cb, void *d)
 	size_t buflen = 0;
 	struct asignify_private_key privk;
 	bool first = true;
+	ssize_t r;
 
 	memset(&privk, 0, sizeof(privk));
 
-	while (getline(&buf, &buflen, f) != -1) {
+	while ((r = getline(&buf, &buflen, f)) != -1) {
 		if (first) {
 			/* Check magic */
 			if (memcmp(buf, PRIVKEY_MAGIC, sizeof(PRIVKEY_MAGIC) - 1) == 0) {
@@ -464,7 +474,7 @@ asignify_private_data_load(FILE *f, asignify_password_cb password_cb, void *d)
 			}
 		}
 		else {
-			if (!asignify_private_data_parse_line(buf, buflen, &privk)) {
+			if (!asignify_private_data_parse_line(buf, r, &privk)) {
 				asignify_privkey_cleanup(&privk);
 				return (NULL);
 			}
