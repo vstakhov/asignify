@@ -25,11 +25,23 @@
 #include "config.h"
 #endif
 
+#include <sys/types.h>
+#include <sys/param.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <err.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdbool.h>
+
+#ifdef HAVE_READPASSPHRASE_H
+#include <readpassphrase.h>
+#elif defined(HAVE_BSD_READPASSPHRASE_H)
+#include <bsd/readpassphrase.h>
+#else
+#error "No passphrase read functions available"
+#endif
+
 #include "asignify.h"
 
 static void
@@ -47,6 +59,31 @@ usage(const char *error)
 	exit(EXIT_FAILURE);
 }
 
+static int
+read_password(char *buf, size_t len, void *d)
+{
+	char password[512], repeat[512];
+	int l1, l2;
+
+	if (readpassphrase("Password:", password, sizeof(password), 0) != NULL) {
+		if (readpassphrase("Verify:", repeat, sizeof(repeat), 0) != NULL) {
+			l1 = strlen(password);
+			l2 = strlen(repeat);
+			if (l1 == l2 && l1 <= len) {
+				if (memcmp(password, repeat, l1) == 0) {
+					memcpy(buf, password, l1);
+					explicit_memzero(password, sizeof(password));
+					explicit_memzero(repeat, sizeof(repeat));
+
+					return (l1);
+				}
+			}
+		}
+	}
+
+	return (-1);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -55,6 +92,7 @@ main(int argc, char **argv)
 	int ch, rounds, i;
 	char sigfilebuf[1024];
 	int quiet = 0;
+	bool unencrypted = 0;
 	asignify_verify_t *vrf;
 	enum {
 		NONE = 0,
@@ -67,7 +105,7 @@ main(int argc, char **argv)
 
 	rounds = 42;
 
-	while ((ch = getopt(argc, argv, "CGSVc:em:np:qs:x:")) != -1) {
+	while ((ch = getopt(argc, argv, "CGSVuc:em:np:qr:s:x:")) != -1) {
 		switch (ch) {
 		case 'C':
 			if (verb) {
@@ -81,6 +119,12 @@ main(int argc, char **argv)
 			}
 			verb = VERIFY;
 			break;
+		case 'G':
+			if (verb) {
+				usage(NULL);
+			}
+			verb = GENERATE;
+			break;
 		case 'm':
 			msgfile = optarg;
 			break;
@@ -92,6 +136,9 @@ main(int argc, char **argv)
 			break;
 		case 'q':
 			quiet = 1;
+			break;
+		case 'r':
+			rounds = strtoul(optarg, NULL, 10);
 			break;
 		case 's':
 			seckeyfile = optarg;
@@ -106,6 +153,8 @@ main(int argc, char **argv)
 	}
 	argc -= optind;
 	argv += optind;
+
+	unencrypted = (rounds == 0);
 
 	if (!sigfile && msgfile) {
 		int nr;
@@ -141,6 +190,24 @@ main(int argc, char **argv)
 					errx(1, "cannot verify file %s: %s", argv[i],
 						asignify_verify_get_error(vrf));
 				}
+			}
+		}
+	}
+	else if (verb == GENERATE) {
+		if (!pubkeyfile || !seckeyfile) {
+			usage("must specify both public and secret keys to generate");
+		}
+
+		if (!unencrypted) {
+			if (!asignify_generate(seckeyfile, pubkeyfile, 1, rounds,
+					read_password, NULL)) {
+				errx(1, "Cannot generate keypair");
+			}
+		}
+		else {
+			if (!asignify_generate(seckeyfile, pubkeyfile, 1, 0,
+					NULL, NULL)) {
+				errx(1, "Cannot generate keypair");
 			}
 		}
 	}

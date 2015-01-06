@@ -202,7 +202,7 @@ asignify_pubkey_write(struct asignify_public_data *pk, FILE *f)
 		b64_ntop(pk->id, pk->id_len, b64id, pk->id_len * 2);
 		b64data = xmalloc(pk->data_len * 2);
 		b64_ntop(pk->data, pk->data_len, b64data, pk->data_len * 2);
-		ret = (fprintf(f, "%s:1:%s:%s\n", PUBKEY_MAGIC, b64id, b64data) > 0);
+		ret = (fprintf(f, "%s1:%s:%s\n", PUBKEY_MAGIC, b64id, b64data) > 0);
 		free(b64id);
 		free(b64data);
 	}

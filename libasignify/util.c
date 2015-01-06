@@ -121,7 +121,12 @@ xfopen(const char *fname, const char *mode)
 	}
 	else {
 		if (stat(fname, &sb) == -1) {
-			return (NULL);
+			if (strchr(mode, 'w') != NULL) {
+				res = fopen(fname, mode);
+			}
+			else {
+				return (NULL);
+			}
 		}
 		else if (S_ISDIR(sb.st_mode)) {
 			errno = EINVAL;

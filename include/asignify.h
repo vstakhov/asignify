@@ -158,6 +158,13 @@ bool asignify_generate(const char *privkf, const char *pubkf,
 		unsigned int version, unsigned int rounds,
 		asignify_password_cb password_cb, void *d);
 
+/**
+ * Safely zero specified memory region
+ * @param pnt pointer to zero
+ * @param len size of region
+ */
+void explicit_memzero(void * const pnt, const size_t len);
+
 #if defined(__cplusplus)
 }
 #endif

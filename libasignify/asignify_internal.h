@@ -30,7 +30,7 @@
 #include "asignify.h"
 
 #define OBSD_COMMENTHDR "untrusted comment: "
-#define PRIVKEY_MAGIC "signify-private-key"
+#define PRIVKEY_MAGIC "asignify-private-key"
 #define PBKDF_MINROUNDS 42
 #define KEY_ID_LEN 8
 #define SALT_LEN 16
@@ -72,7 +72,6 @@ struct asignify_private_key {
 	unsigned char *encrypted_blob;
 };
 
-void explicit_memzero(void * const pnt, const size_t len);
 void randombytes(unsigned char *buf, uint64_t len);
 
 int pkcs5_pbkdf2(const char *pass, size_t pass_len, const uint8_t *salt,

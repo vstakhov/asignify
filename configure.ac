@@ -38,6 +38,7 @@ AC_CHECK_HEADERS_ONCE([stdbool.h])
 AC_CHECK_HEADERS_ONCE([stdint.h])
 AC_CHECK_HEADERS_ONCE([string.h])
 AC_CHECK_HEADERS_ONCE([unistd.h])
+AC_CHECK_HEADERS_ONCE([readpassprase.h])
 
 dnl BSD library on Linux systems
 AC_CANONICAL_HOST

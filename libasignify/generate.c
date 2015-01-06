@@ -53,7 +53,8 @@ asignify_generate_v1(FILE *privf, FILE *pubf, unsigned int rounds,
 	int r;
 	bool ret = true;
 
-	if (privf == NULL || pubf == NULL || rounds < PBKDF_MINROUNDS) {
+	if (privf == NULL || pubf == NULL ||
+			(password_cb != NULL && rounds < PBKDF_MINROUNDS)) {
 		return (false);
 	}
 
@@ -70,6 +71,7 @@ asignify_generate_v1(FILE *privf, FILE *pubf, unsigned int rounds,
 
 	privk->encrypted_blob = xmalloc(crypto_sign_SECRETKEYBYTES);
 	pubk->data = xmalloc(crypto_sign_PUBLICKEYBYTES);
+	pubk->data_len = crypto_sign_PUBLICKEYBYTES;
 	crypto_sign_keypair(pubk->data, privk->encrypted_blob);
 
 	if (password_cb != NULL) {
@@ -117,6 +119,9 @@ cleanup:
 	free(privk->salt);
 	free(privk->checksum);
 	free(privk->encrypted_blob);
+
+	fclose(pubf);
+	fclose(privf);
 
 	return (ret);
 }
