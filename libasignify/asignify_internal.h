@@ -107,6 +107,7 @@ char * bin2hex(char * const hex, const size_t hex_maxlen,
 	const unsigned char * const bin, const size_t bin_len);
 
 unsigned int asignify_digest_len(enum asignify_digest_type type);
+const char * asignify_digest_name(enum asignify_digest_type type);
 unsigned char* asignify_digest_fd(enum asignify_digest_type type, int fd);
 
 enum asignify_error {
@@ -142,6 +143,8 @@ struct asignify_private_data* asignify_private_data_load(FILE *f,
 	asignify_password_cb password_cb, void *d);
 void asignify_private_data_free(struct asignify_private_data *d);
 bool asignify_privkey_write(struct asignify_private_key *privk, FILE *f);
+struct asignify_public_data* asignify_private_data_sign(
+	struct asignify_private_data *privk, unsigned char *buf, size_t len);
 
 /*
  * Pubkey operations
@@ -155,5 +158,7 @@ bool asignify_pubkey_write(struct asignify_public_data *pk, FILE *f);
  * Signature operations
  */
 struct asignify_public_data* asignify_signature_load(FILE *f);
+bool asignify_signature_write(struct asignify_public_data *sig, const void *buf,
+	size_t len, FILE *f);
 
 #endif /* ASIGNIFY_INTERNAL_H_ */

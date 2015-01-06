@@ -168,8 +168,6 @@ asignify_pubkey_check_signature(struct asignify_public_data *pk,
 				/* version to prevent versioning attacks */
 				blake2b_update(&hs, (const uint8_t *)&sig->version,
 					sizeof(sig->version));
-				/* id of key */
-				blake2b_update(&hs, pk->id, pk->id_len);
 				/* data part */
 				blake2b_update(&hs, data, dlen);
 				blake2b_final(&hs, h, sizeof(h));

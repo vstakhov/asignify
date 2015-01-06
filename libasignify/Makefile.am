@@ -17,6 +17,7 @@ libasignify_la_SOURCES =	tweetnacl.c \
 							generate.c \
 							pubkey.c \
 							verify.c \
+							sign.c \
 							signature.c \
 							util.c
 
