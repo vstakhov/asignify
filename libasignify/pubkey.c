@@ -88,19 +88,20 @@ asignify_pubkey_load(FILE *f)
 	struct asignify_public_data *res = NULL;
 	char *buf = NULL;
 	size_t buflen = 0;
+	ssize_t r;
 	bool first = true;
 
 	if (f == NULL) {
 		abort();
 	}
 
-	while (getline(&buf, &buflen, f) != -1) {
-		if (first && buflen > sizeof(PUBKEY_MAGIC)) {
+	while ((r = getline(&buf, &buflen, f)) != -1) {
+		if (first && r > sizeof(PUBKEY_MAGIC)) {
 			first = false;
 
 			/* Check for asignify pubkey */
 			if (memcmp(buf, PUBKEY_MAGIC, sizeof(PUBKEY_MAGIC) - 1) == 0) {
-				res = asignify_public_data_load(buf, buflen,
+				res = asignify_public_data_load(buf, r,
 					PUBKEY_MAGIC, sizeof(PUBKEY_MAGIC) - 1,
 					PUBKEY_VER_MAX, PUBKEY_VER_MAX,
 					KEY_ID_LEN, PUBKEY_KEY_LEN);
@@ -108,12 +109,12 @@ asignify_pubkey_load(FILE *f)
 			}
 			else {
 				/* We can have either openbsd pubkey or some garbage */
-				if (!asignify_pubkey_try_obsd(buf, buflen, &res)) {
+				if (!asignify_pubkey_try_obsd(buf, r, &res)) {
 					break;
 				}
 			}
 		}
-		if (!asignify_pubkey_try_obsd(buf, buflen, &res)) {
+		if (!asignify_pubkey_try_obsd(buf, r, &res)) {
 			break;
 		}
 	}

@@ -88,30 +88,31 @@ asignify_signature_load(FILE *f)
 	struct asignify_public_data *res = NULL;
 	char *buf = NULL;
 	size_t buflen = 0;
+	ssize_t r;
 	bool first = true;
 
 	if (f == NULL) {
 		abort();
 	}
 
-	while (getline(&buf, &buflen, f) != -1) {
-		if (first && buflen > sizeof(SIG_MAGIC)) {
+	while ((r = getline(&buf, &buflen, f)) != -1) {
+		if (first && r > sizeof(SIG_MAGIC)) {
 			first = false;
 
 			if (memcmp(buf, SIG_MAGIC, sizeof(SIG_MAGIC) - 1) == 0) {
-				res = asignify_public_data_load(buf, buflen,
+				res = asignify_public_data_load(buf, r,
 					SIG_MAGIC, sizeof(SIG_MAGIC) - 1,
 					SIG_VER_MAX, SIG_VER_MAX,
 					KEY_ID_LEN, SIG_LEN);
 				break;
 			}
 			else {
-				if (!asignify_sig_try_obsd(buf, buflen, &res)) {
+				if (!asignify_sig_try_obsd(buf, r, &res)) {
 					break;
 				}
 			}
 		}
-		if (!asignify_sig_try_obsd(buf, buflen, &res)) {
+		if (!asignify_sig_try_obsd(buf, r, &res)) {
 			break;
 		}
 	}
