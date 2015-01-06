@@ -49,7 +49,7 @@ case $host_os in
         OS_LIBS="-ldl -lrt -lbsd"
         ;;
     *)
-        OS_CFLAGS="-D_BSD_SOURCE"
+        OS_CFLAGS="-D_BSD_SOURCE -D_WITH_GETLINE"
         OS_LDFLAGS=
         OS_LIBS=
         ;;

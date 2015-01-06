@@ -23,9 +23,11 @@
 #ifndef ASIGNIFY_INTERNAL_H_
 #define ASIGNIFY_INTERNAL_H_
 
+#include <sys/types.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <fcntl.h> /* for mode_t */
 
 #include "asignify.h"
 
