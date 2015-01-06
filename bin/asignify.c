@@ -39,7 +39,7 @@
 #elif defined(HAVE_BSD_READPASSPHRASE_H)
 #include <bsd/readpassphrase.h>
 #else
-#error "No passphrase read functions available"
+#include "readpassphrase_compat.h"
 #endif
 
 #include "asignify.h"

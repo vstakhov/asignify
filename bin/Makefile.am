@@ -1,3 +1,5 @@
+noinst_HEADERS= readpassphrase_compat.h
+
 bin_PROGRAMS=asignify
  
 asignify_SOURCES= asignify.c
