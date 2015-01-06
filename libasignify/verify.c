@@ -82,6 +82,7 @@ asignify_verify_load_sig(struct asignify_verify_ctx *ctx, FILE *f, size_t *len)
 	}
 
 	*len = kv_size(res);
+	kv_push(unsigned char, res, '\0');
 
 	return (res.a);
 }
@@ -382,6 +383,7 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 	unsigned char *data;
 	size_t dlen;
 	FILE *f;
+	bool ret = false;
 
 	if (ctx == NULL || ctx->pk == NULL) {
 		if (ctx) {
@@ -407,6 +409,7 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 
 			if (!asignify_pubkey_check_signature(ctx->pk, sig, data, dlen)) {
 				asignify_public_data_free(sig);
+				free(data);
 				return (false);
 			}
 
@@ -414,16 +417,14 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 			asignify_public_data_free(sig);
 			ctx->files = kh_init(asignify_verify_hnode);
 
-			if (!asignify_verify_parse_files(ctx, (const char *)data, dlen)) {
-				return (false);
+			if (asignify_verify_parse_files(ctx, (const char *)data, dlen)) {
+				ret = true;
 			}
-			else {
-				return (true);
-			}
+			free(data);
 		}
 	}
 
-	return (false);
+	return (ret);
 }
 
 bool

@@ -218,6 +218,8 @@ main(int argc, char **argv)
 				}
 			}
 		}
+
+		asignify_verify_free(vrf);
 		break;
 
 	case GENERATE:
@@ -272,6 +274,8 @@ main(int argc, char **argv)
 			errx(1, "cannot write sign file %s: %s", sigfile,
 				asignify_sign_get_error(sgn));
 		}
+
+		asignify_sign_free(sgn);
 		break;
 
 	default:
