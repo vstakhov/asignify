@@ -26,12 +26,14 @@
 #endif
 
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #ifdef HAVE_OPENSSL
 #include <openssl/rand.h>
@@ -139,6 +141,43 @@ xfopen(const char *fname, const char *mode)
 	return (res);
 }
 
+int
+xopen(const char *fname, int oflags, mode_t mode)
+{
+	struct stat sb;
+	int fd;
+
+	if (strcmp(fname, "-") == 0) {
+		if ((oflags & O_WRONLY)) {
+			fd = dup(STDOUT_FILENO);
+		}
+		else {
+			fd = dup(STDIN_FILENO);
+		}
+		if (fd == -1) {
+			return (-1);
+		}
+	}
+	else {
+#ifdef HAVE_O_NOFOLLOW
+		fd = open(fname, oflags | O_NOFOLLOW, mode);
+#else
+		fd = open(fname, oflags, mode);
+#endif
+
+		if (fd == -1) {
+			return (-1);
+		}
+	}
+
+	if (fstat(fd, &sb) == -1 || S_ISDIR(sb.st_mode)) {
+		close(fd);
+		return (-1);
+	}
+
+	return (fd);
+}
+
 void *
 xmalloc(size_t len)
 {
@@ -160,6 +199,18 @@ xmalloc0(size_t len)
 	void *p = xmalloc(len);
 
 	memset(p, 0, len);
+
+	return (p);
+}
+
+char *
+xstrdup(const char *str)
+{
+	char *p;
+
+	if (!(p = strdup(str))) {
+		abort();
+	}
 
 	return (p);
 }

@@ -90,8 +90,10 @@ int pkcs5_pbkdf2(const char *pass, size_t pass_len, const uint8_t *salt,
     size_t salt_len, uint8_t *key, size_t key_len, unsigned int rounds);
 
 FILE * xfopen(const char *fname, const char *mode);
+int xopen(const char *fname, int oflags, mode_t mode);
 void * xmalloc(size_t len);
 void * xmalloc0(size_t len);
+char * xstrdup(const char *str);
 
 int b64_pton(char const *src, unsigned char *target, size_t targsize);
 int b64_pton_stop(char const *src, unsigned char *target, size_t targsize, const char *stop);

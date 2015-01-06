@@ -446,15 +446,7 @@ asignify_verify_file(asignify_verify_t *ctx, const char *checkf)
 	k = kh_get(asignify_verify_hnode, ctx->files, checkf);
 
 	if (k != kh_end(ctx->files)) {
-#ifdef HAVE_O_NOFOLLOW
-		fd = open(checkf, O_RDONLY|O_NOFOLLOW);
-#else
-		fd = open(checkf, O_RDONLY);
-#endif
-		if (fd == -1) {
-			ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
-			return (false);
-		}
+		fd = xopen(checkf, O_RDONLY, 0);
 
 		f = kh_value(ctx->files, k);
 
