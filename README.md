@@ -31,15 +31,15 @@ To sign a file, `asignify` does the following steps:
 2. Opens secret key file (decrypting it if needed)
 3. Write all digests to the output buffer in format:
 
-	sha256 (filename) = deadbeef....
-	size (filename) = 666
-	...
+```
+SHA256 (filename) = deadbeef....
+SIZE (filename) = 666
+...
+```
 
 4. Calculates ed25519 signature over using secret key and the following fields:
-
-	version
-	data
-
+	- version
+	- data
 5. Afterwards, a signature is packed into `asignify` signature line and prepended
 to the digests content
 
