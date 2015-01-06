@@ -42,6 +42,10 @@
 #define RPP_SEVENBIT 0x10 /* Strip the high bit from input. */
 #define RPP_STDIN 0x20 /* Read from stdin, not /dev/tty */
 
+#ifndef _NSIG
+#define _NSIG 32
+#endif
+
 static volatile sig_atomic_t signo[_NSIG];
 static void handler(int);
 
