@@ -1,4 +1,5 @@
 #include "tweetnacl.h"
+#include "blake2.h"
 #define FOR(i,n) for (i = 0;i < n;++i)
 #define sv static void
 
@@ -561,6 +562,7 @@ static const u8 iv[64] = {
 
 int crypto_hash(u8 *out,const u8 *m,u64 n)
 {
+#if 0
   u8 h[64],x[256];
   u64 i,b = n;
 
@@ -581,6 +583,8 @@ int crypto_hash(u8 *out,const u8 *m,u64 n)
   crypto_hashblocks(h,x,n);
 
   FOR(i,64) out[i] = h[i];
+#endif
+  blake2(out, m, NULL, BLAKE2B_OUTBYTES, n, 0);
 
   return 0;
 }
