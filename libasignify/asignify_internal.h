@@ -90,6 +90,8 @@ int b64_ntop(unsigned char *src, size_t srclength, char *target,
 int hex2bin(unsigned char * const bin, const size_t bin_maxlen,
     const char * const hex, const size_t hex_len,
     size_t * const bin_len, const char ** const hex_end);
+char * bin2hex(char * const hex, const size_t hex_maxlen,
+	const unsigned char * const bin, const size_t bin_len);
 
 unsigned int asignify_digest_len(enum asignify_digest_type type);
 unsigned char* asignify_digest_fd(enum asignify_digest_type type, int fd);
@@ -126,6 +128,7 @@ void asignify_public_data_free(struct asignify_public_data *d);
 struct asignify_private_data* asignify_private_data_load(FILE *f,
 	asignify_password_cb password_cb, void *d);
 void asignify_private_data_free(struct asignify_private_data *d);
+bool asignify_privkey_write(struct asignify_private_key *privk, FILE *f);
 
 /*
  * Pubkey operations

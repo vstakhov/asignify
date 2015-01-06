@@ -169,6 +169,7 @@ xerr_string(enum asignify_error code)
 	return (err_str[code]);
 }
 
+/* Derived from original code by CodesInChaos */
 
 int
 hex2bin(unsigned char * const bin, const size_t bin_maxlen,
@@ -224,6 +225,34 @@ hex2bin(unsigned char * const bin, const size_t bin_maxlen,
 
 	return ret;
 }
+
+char *
+bin2hex(char * const hex, const size_t hex_maxlen,
+               const unsigned char * const bin, const size_t bin_len)
+{
+    size_t       i = (size_t) 0U;
+    unsigned int x;
+    int          b;
+    int          c;
+
+    if (bin_len >= SIZE_MAX / 2 || hex_maxlen < bin_len * 2U) {
+        abort();
+    }
+    while (i < bin_len) {
+        c = bin[i] & 0xf;
+        b = bin[i] >> 4;
+        x = (unsigned char) (87 + c + (((c - 10) >> 31) & -39)) << 8 |
+            (unsigned char) (87 + b + (((b - 10) >> 31) & -39));
+        hex[i * 2U] = (char) x;
+        x >>= 8;
+        hex[i * 2U + 1U] = (char) x;
+        i++;
+    }
+    hex[i * 2U] = 0;
+
+    return hex;
+}
+
 
 unsigned int
 asignify_digest_len(enum asignify_digest_type type)

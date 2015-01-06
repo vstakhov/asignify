@@ -144,6 +144,20 @@ const char* asignify_sign_get_error(asignify_sign_t *ctx);
  */
 void asignify_sign_free(asignify_sign_t *ctx);
 
+/**
+ * Generate new keypair
+ * @param privkf filename for private key
+ * @param pubkf filename for public key
+ * @param version version of pair
+ * @param rounds rounds of PBKDF
+ * @param password_cb password callback (if NULL then private key is not encrypted)
+ * @param d opaque data pointer for password
+ * @return true if pair has been written successfully
+ */
+bool asignify_generate(const char *privkf, const char *pubkf,
+		unsigned int version, unsigned int rounds,
+		asignify_password_cb password_cb, void *d);
+
 #if defined(__cplusplus)
 }
 #endif
