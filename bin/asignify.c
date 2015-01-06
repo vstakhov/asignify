@@ -60,7 +60,7 @@ usage(const char *error)
 }
 
 static int
-read_password(char *buf, size_t len, void *d)
+read_password_verify(char *buf, size_t len, void *d)
 {
 	char password[512], repeat[512];
 	int l1, l2;
@@ -84,6 +84,23 @@ read_password(char *buf, size_t len, void *d)
 	return (-1);
 }
 
+static int
+read_password(char *buf, size_t len, void *d)
+{
+	char password[512];
+	int l;
+
+	if (readpassphrase("Password:", password, sizeof(password), 0) != NULL) {
+		l = strlen(password);
+		memcpy(buf, password, l);
+		explicit_memzero(password, sizeof(password));
+
+		return (l);
+	}
+
+	return (-1);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -94,6 +111,7 @@ main(int argc, char **argv)
 	int quiet = 0;
 	bool unencrypted = 0;
 	asignify_verify_t *vrf;
+	asignify_sign_t *sgn;
 	enum {
 		NONE = 0,
 		CHECK,
@@ -124,6 +142,12 @@ main(int argc, char **argv)
 				usage(NULL);
 			}
 			verb = GENERATE;
+			break;
+		case 'S':
+			if (verb) {
+				usage(NULL);
+			}
+			verb = SIGN;
 			break;
 		case 'm':
 			msgfile = optarg;
@@ -169,7 +193,9 @@ main(int argc, char **argv)
 	}
 
 
-	if (verb == CHECK || verb == VERIFY) {
+	switch(verb) {
+	case CHECK:
+	case VERIFY:
 		vrf = asignify_verify_init();
 		if (!asignify_verify_load_pubkey(vrf, pubkeyfile)) {
 			errx(1, "cannot load pubkey %s: %s", pubkeyfile,
@@ -192,15 +218,16 @@ main(int argc, char **argv)
 				}
 			}
 		}
-	}
-	else if (verb == GENERATE) {
+		break;
+
+	case GENERATE:
 		if (!pubkeyfile || !seckeyfile) {
 			usage("must specify both public and secret keys to generate");
 		}
 
 		if (!unencrypted) {
 			if (!asignify_generate(seckeyfile, pubkeyfile, 1, rounds,
-					read_password, NULL)) {
+					read_password_verify, NULL)) {
 				errx(1, "Cannot generate keypair");
 			}
 		}
@@ -210,6 +237,46 @@ main(int argc, char **argv)
 				errx(1, "Cannot generate keypair");
 			}
 		}
+		break;
+
+	case SIGN:
+		if (!seckeyfile || !sigfile) {
+			usage("must specify both secret key and signature to generate");
+		}
+		if (argc == 0) {
+			usage(NULL);
+		}
+
+		sgn = asignify_sign_init();
+
+		if (unencrypted) {
+			if (!asignify_sign_load_privkey(sgn, seckeyfile, NULL, NULL)) {
+				errx(1, "cannot load private key %s: %s", seckeyfile,
+					asignify_sign_get_error(sgn));
+			}
+		}
+		else {
+			if (!asignify_sign_load_privkey(sgn, seckeyfile, read_password, NULL)) {
+				errx(1, "cannot load private key %s: %s", seckeyfile,
+					asignify_sign_get_error(sgn));
+			}
+		}
+		for (i = 0; i < argc; i ++) {
+			if (!asignify_sign_add_file(sgn, argv[i], ASIGNIFY_DIGEST_BLAKE2)) {
+				errx(1, "cannot sign file %s: %s", argv[i],
+					asignify_sign_get_error(sgn));
+			}
+		}
+
+		if (!asignify_sign_write_signature(sgn, sigfile)) {
+			errx(1, "cannot write sign file %s: %s", sigfile,
+				asignify_sign_get_error(sgn));
+		}
+		break;
+
+	default:
+		usage(NULL);
+		break;
 	}
 
 	return (EXIT_SUCCESS);
