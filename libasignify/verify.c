@@ -526,5 +526,6 @@ asignify_verify_free(asignify_verify_t *ctx)
 		}
 
 		kh_destroy(asignify_verify_hnode, ctx->files);
+		free(ctx);
 	}
 }
