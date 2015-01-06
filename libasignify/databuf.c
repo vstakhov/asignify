@@ -375,6 +375,7 @@ static void
 asignify_pkey_to_private_data(struct asignify_private_key *privk,
 		struct asignify_private_data *priv)
 {
+	priv->version = privk->version;
 	priv->data = xmalloc(crypto_sign_SECRETKEYBYTES);
 	priv->data_len = crypto_sign_SECRETKEYBYTES;
 	memcpy(priv->data, privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
