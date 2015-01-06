@@ -333,6 +333,32 @@ asignify_digest_len(enum asignify_digest_type type)
 	return (ret);
 }
 
+const char *
+asignify_digest_name(enum asignify_digest_type type)
+{
+	const char *ret;
+
+	switch(type) {
+	case ASIGNIFY_DIGEST_SHA512:
+		ret = "SHA512";
+		break;
+	case ASIGNIFY_DIGEST_SHA256:
+		ret = "SHA256";
+		break;
+	case ASIGNIFY_DIGEST_BLAKE2:
+		ret = "BLAKE2";
+		break;
+	case ASIGNIFY_DIGEST_SIZE:
+		ret = "SIZE";
+		break;
+	default:
+		ret = "";
+		break;
+	}
+
+	return (ret);
+}
+
 static void *
 asignify_digest_init(enum asignify_digest_type type)
 {
