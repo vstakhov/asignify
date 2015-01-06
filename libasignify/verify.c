@@ -43,19 +43,7 @@
 #include "khash.h"
 #include "kvec.h"
 
-struct asignify_verify_digest {
-	enum asignify_digest_type digest_type;
-	unsigned char *digest;
-	struct asignify_verify_digest *next;
-};
-
-struct asignify_verify_file {
-	char *fname;
-	struct asignify_verify_digest *digests;
-	uint64_t size;
-};
-
-KHASH_INIT(asignify_verify_hnode, const char *, struct asignify_verify_file *, 1,
+KHASH_INIT(asignify_verify_hnode, const char *, struct asignify_file *, 1,
 	kh_str_hash_func, kh_str_hash_equal);
 
 struct asignify_verify_ctx {
@@ -123,7 +111,7 @@ asignify_verify_parse_digest_type(const char *data, ssize_t dlen)
 
 static bool
 asignify_verify_parse_digest(const char *data, ssize_t dlen,
-	enum asignify_digest_type type, struct asignify_verify_file *f)
+	enum asignify_digest_type type, struct asignify_file *f)
 {
 	const unsigned int digests_sizes[ASIGNIFY_DIGEST_MAX] = {
 		[ASIGNIFY_DIGEST_SHA512] = SHA512_DIGEST_STRING_LENGTH - 1,
@@ -133,7 +121,7 @@ asignify_verify_parse_digest(const char *data, ssize_t dlen,
 	};
 	char *errstr;
 	uint64_t flen;
-	struct asignify_verify_digest *dig;
+	struct asignify_file_digest *dig;
 	unsigned int dig_len;
 
 	if (dlen <= 0 || type >= ASIGNIFY_DIGEST_MAX || f == NULL) {
@@ -197,7 +185,7 @@ asignify_verify_parse_files(struct asignify_verify_ctx *ctx, const char *data,
 	char *fbuf;
 	khiter_t k;
 	int r;
-	struct asignify_verify_file *cur_file = NULL;
+	struct asignify_file *cur_file = NULL;
 	enum asignify_digest_type dig_type = ASIGNIFY_DIGEST_MAX;
 
 	p = data;
@@ -444,8 +432,8 @@ asignify_verify_file(asignify_verify_t *ctx, const char *checkf)
 	khiter_t k;
 	struct stat st;
 	int fd, check;
-	struct asignify_verify_file *f;
-	struct asignify_verify_digest *d;
+	struct asignify_file *f;
+	struct asignify_file_digest *d;
 	unsigned char *calc_digest;
 
 	if (ctx == NULL || ctx->files == NULL) {
@@ -527,8 +515,8 @@ void
 asignify_verify_free(asignify_verify_t *ctx)
 {
 	khiter_t k;
-	struct asignify_verify_digest *d, *dtmp;
-	struct asignify_verify_file *f;
+	struct asignify_file_digest *d, *dtmp;
+	struct asignify_file *f;
 
 	if (ctx) {
 		asignify_public_data_free(ctx->pk);

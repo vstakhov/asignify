@@ -72,6 +72,18 @@ struct asignify_private_key {
 	unsigned char *encrypted_blob;
 };
 
+struct asignify_file_digest {
+	enum asignify_digest_type digest_type;
+	unsigned char *digest;
+	struct asignify_file_digest *next;
+};
+
+struct asignify_file {
+	char *fname;
+	struct asignify_file_digest *digests;
+	uint64_t size;
+};
+
 void randombytes(unsigned char *buf, uint64_t len);
 
 int pkcs5_pbkdf2(const char *pass, size_t pass_len, const uint8_t *salt,
