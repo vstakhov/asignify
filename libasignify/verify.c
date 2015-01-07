@@ -458,6 +458,7 @@ asignify_verify_file(asignify_verify_t *ctx, const char *checkf)
 		}
 
 		if (f->size > 0 && f->size != st.st_size) {
+			ctx->error = xerr_string(ASIGNIFY_ERROR_VERIFY_SIZE);
 			close(fd);
 			return (false);
 		}

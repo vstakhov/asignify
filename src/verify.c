@@ -142,7 +142,7 @@ cli_check(int argc, char **argv)
 
 	for (i = 3; i < argc; i ++) {
 		if (!asignify_verify_file(vrf, argv[i])) {
-			fprintf(stderr, "cannot check file %s: %s\n", argv[i],
+			fprintf(stderr, "verification failed for %s: %s\n", argv[i],
 				asignify_verify_get_error(vrf));
 			ret = -1;
 		}

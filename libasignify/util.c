@@ -54,6 +54,7 @@ const char* err_str[ASIGNIFY_ERROR_MAX] = {
 	[ASIGNIFY_ERROR_FORMAT] = "incorrect data format",
 	[ASIGNIFY_ERROR_PASSWORD] = "wrong password",
 	[ASIGNIFY_ERROR_MISUSE] = "library is used incorrectly",
+	[ASIGNIFY_ERROR_VERIFY_SIZE] = "incorrect file size",
 	[ASIGNIFY_ERROR_VERIFY] = "signature verification error",
 	[ASIGNIFY_ERROR_VERIFY_DIGEST] = "digest verification error",
 	[ASIGNIFY_ERROR_NO_DIGEST] = "digest is missing for the file specified",
