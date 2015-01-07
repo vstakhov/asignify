@@ -137,16 +137,21 @@ cli_generate(int argc, char **argv)
 	if (rounds > 0) {
 		if (!asignify_generate(seckeyfile, pubkeyfile, 1, rounds,
 				read_password_verify, NULL)) {
-			fprintf(stderr, "Cannot generate keypair");
+			fprintf(stderr, "Cannot generate keypair\n");
 			return (-1);
 		}
 	}
 	else {
 		if (!asignify_generate(seckeyfile, pubkeyfile, 1, 0,
 				NULL, NULL)) {
-			fprintf(stderr, "Cannot generate keypair");
+			fprintf(stderr, "Cannot generate keypair\n");
 			return (-1);
 		}
+	}
+
+	if (!quiet) {
+		printf("%s keypair is saved in %s (private) and %s (public)\n",
+			rounds > 0 ? "Encrypted" : "Unencrypted", seckeyfile, pubkeyfile);
 	}
 
 	return (1);

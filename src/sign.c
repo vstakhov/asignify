@@ -145,7 +145,7 @@ cli_sign(int argc, char **argv)
 	sgn = asignify_sign_init();
 
 	if (!asignify_sign_load_privkey(sgn, seckeyfile, read_password, NULL)) {
-		fprintf(stderr, "cannot load private key %s: %s", seckeyfile,
+		fprintf(stderr, "cannot load private key %s: %s\n", seckeyfile,
 			asignify_sign_get_error(sgn));
 		asignify_sign_free(sgn);
 		return (-1);
@@ -155,16 +155,20 @@ cli_sign(int argc, char **argv)
 		dtit = dt_list;
 		while(dtit != NULL) {
 			if (!asignify_sign_add_file(sgn, argv[i], dtit->type)) {
-				fprintf(stderr, "cannot sign file %s: %s", argv[i],
+				fprintf(stderr, "cannot sign file %s: %s\n", argv[i],
 					asignify_sign_get_error(sgn));
 				asignify_sign_free(sgn);
 				return (-1);
+			}
+			else if (!quiet) {
+				printf("added %s digest of %s\n",
+					asignify_digest_name(dtit->type), argv[i]);
 			}
 			dtit = dtit->next;
 		}
 		if (!no_size) {
 			if (!asignify_sign_add_file(sgn, argv[i], ASIGNIFY_DIGEST_SIZE)) {
-				fprintf(stderr, "cannot sign file %s: %s", argv[i],
+				fprintf(stderr, "cannot sign file %s: %s\n", argv[i],
 					asignify_sign_get_error(sgn));
 				asignify_sign_free(sgn);
 				return (-1);
@@ -173,13 +177,17 @@ cli_sign(int argc, char **argv)
 	}
 
 	if (!asignify_sign_write_signature(sgn, sigfile)) {
-		fprintf(stderr, "cannot write sign file %s: %s", sigfile,
+		fprintf(stderr, "cannot write sign file %s: %s\n", sigfile,
 			asignify_sign_get_error(sgn));
 		asignify_sign_free(sgn);
 		return (-1);
 	}
 
 	asignify_sign_free(sgn);
+
+	if (!quiet) {
+		printf("Signature file %s has been successfully signed\n", sigfile);
+	}
 
 	return (1);
 }

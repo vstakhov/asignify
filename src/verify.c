@@ -70,17 +70,20 @@ cli_verify(int argc, char **argv)
 
 	vrf = asignify_verify_init();
 	if (!asignify_verify_load_pubkey(vrf, pubkeyfile)) {
-		fprintf(stderr, "cannot load pubkey %s: %s", pubkeyfile,
+		fprintf(stderr, "cannot load pubkey %s: %s\n", pubkeyfile,
 			asignify_verify_get_error(vrf));
 		asignify_verify_free(vrf);
 		return (-1);
 	}
 
 	if (!asignify_verify_load_signature(vrf, sigfile)) {
-		fprintf(stderr, "cannot verify signature %s: %s", sigfile,
+		fprintf(stderr, "cannot verify signature %s: %s\n", sigfile,
 			asignify_verify_get_error(vrf));
 		asignify_verify_free(vrf);
 		return (-1);
+	}
+	else if (!quiet) {
+		printf("validated signature in %s\n", sigfile);
 	}
 
 	asignify_verify_free(vrf);
@@ -121,25 +124,31 @@ cli_check(int argc, char **argv)
 
 	vrf = asignify_verify_init();
 	if (!asignify_verify_load_pubkey(vrf, pubkeyfile)) {
-		fprintf(stderr, "cannot load pubkey %s: %s", pubkeyfile,
+		fprintf(stderr, "cannot load pubkey %s: %s\n", pubkeyfile,
 			asignify_verify_get_error(vrf));
 		asignify_verify_free(vrf);
 		return (-1);
 	}
 
 	if (!asignify_verify_load_signature(vrf, sigfile)) {
-		fprintf(stderr, "cannot verify signature %s: %s", sigfile,
+		fprintf(stderr, "cannot verify signature %s: %s\n", sigfile,
 			asignify_verify_get_error(vrf));
 		asignify_verify_free(vrf);
 		return (-1);
 	}
+	else if (!quiet) {
+		printf("validated signature in %s\n", sigfile);
+	}
 
 	for (i = 3; i < argc; i ++) {
 		if (!asignify_verify_file(vrf, argv[i])) {
-			fprintf(stderr, "cannot check file %s: %s", argv[i],
+			fprintf(stderr, "cannot check file %s: %s\n", argv[i],
 				asignify_verify_get_error(vrf));
 			asignify_verify_free(vrf);
 			return (-1);
+		}
+		else if (!quiet) {
+			printf("file %s has been verified\n", argv[i]);
 		}
 	}
 
