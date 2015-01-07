@@ -95,9 +95,30 @@ cli_generate_help(bool full)
 int
 cli_generate(int argc, char **argv)
 {
-	int rounds = PBKDF_MINROUNDS * 10;
+	int rounds = PBKDF_MINROUNDS * 10, ch;
 	char pubkeybuf[PATH_MAX];
 	const char *seckeyfile, *pubkeyfile;
+	static struct option long_options[] = {
+		{"no-size",   no_argument,     0,  'n' },
+		{"rounds", 	required_argument, 0,  'r' },
+		{0,         0,                 0,  0 }
+	};
+
+	while ((ch = getopt_long(argc, argv, "nr:", long_options, NULL)) != -1) {
+		switch (ch) {
+		case 'n':
+			rounds = 0;
+			break;
+		case 'r':
+			rounds = strtoul(optarg, NULL, 10);
+			break;
+		default:
+			return (0);
+			break;
+		}
+	}
+	argc -= optind;
+	argv += optind;
 
 	if (argc == 1) {
 		/* We have only a secret key specified */
