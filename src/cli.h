@@ -29,16 +29,16 @@
 
 extern int quiet;
 
-const char * cli_verify_help(void);
+const char * cli_verify_help(bool full);
 int cli_verify(int argc, char **argv);
 
-const char * cli_check_help(void);
+const char * cli_check_help(bool full);
 int cli_check(int argc, char **argv);
 
-const char * cli_sign_help(void);
+const char * cli_sign_help(bool full);
 int cli_sign(int argc, char **argv);
 
-const char * cli_generate_help(void);
+const char * cli_generate_help(bool full);
 int cli_generate(int argc, char **argv);
 
 #endif /* CLI_H_ */

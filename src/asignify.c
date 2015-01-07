@@ -51,9 +51,49 @@ usage(const char *error)
 	    "\tasignify [-q] %s\n"
 	    "\tasignify [-q] %s\n"
 	    "\tasignify [-q] %s\n",
-	    cli_verify_help(), cli_check_help(), cli_sign_help(), cli_generate_help());
+	    cli_verify_help(false), cli_check_help(false),
+	    cli_sign_help(false), cli_generate_help(false));
 
 	exit(EXIT_FAILURE);
+}
+
+static
+void help(bool failed, int argc, char **argv)
+{
+	const char *ret = NULL;
+
+	if (argc == 0) {
+		usage(NULL);
+	}
+	else {
+		if (strcasecmp(argv[0], "check") == 0) {
+			ret = cli_check_help(true);
+		}
+		else if (strcasecmp(argv[0], "verify") == 0) {
+			ret = cli_verify_help(true);
+		}
+		else if (strcasecmp(argv[0], "sign") == 0) {
+			ret = cli_sign_help(true);
+		}
+		else if (strcasecmp(argv[0], "generate") == 0) {
+			ret = cli_generate_help(true);
+		}
+		else {
+			usage("unknown command");
+		}
+
+		if (ret != NULL) {
+			if (failed) {
+				fprintf(stderr, "%s", ret);
+				exit(EXIT_FAILURE);
+			}
+			else {
+				printf("%s", ret);
+				exit(EXIT_SUCCESS);
+			}
+		}
+	}
+
 }
 
 int
@@ -101,11 +141,11 @@ main(int argc, char **argv)
 		ret = cli_generate(argc - 1, argv + 1);
 	}
 	else if (strcasecmp(argv[0], "help") == 0) {
-		usage(NULL);
+		help(false, argc - 1, argv + 1);
 	}
 
 	if (ret == 0) {
-		usage(NULL);
+		help(true, argc, argv);
 	}
 	else if (ret == -1) {
 		exit(EXIT_FAILURE);

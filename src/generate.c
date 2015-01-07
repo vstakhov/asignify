@@ -75,9 +75,21 @@ read_password_verify(char *buf, size_t len, void *d)
 }
 
 const char *
-cli_generate_help(void)
+cli_generate_help(bool full)
 {
-	return ("generate [-n] [-r <rounds>] secretkey [publickey]");
+	const char *fullmsg = ""
+		"asignify [global_opts] generate - generates a keypair\n\n"
+		"Usage: asignify generate [-n] [-r <rounds>] <secretkey> [<publickey>]\n"
+		"\t-n:\t\tDo not encrypt secret key\n"
+		"\t-r:\t\tSpecify number of PBKDF rounds for secret key\n"
+		"\tsecretkey:\t\tPath to a secret key\n"
+		"\tpubkey:\t\tPath to a public key (default: <secretkey>.pub)\n";
+
+	if (!full) {
+		return ("generate [-n] [-r <rounds>] secretkey [publickey]");
+	}
+
+	return (fullmsg);
 }
 
 int

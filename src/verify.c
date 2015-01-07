@@ -39,9 +39,19 @@
 #include "cli.h"
 
 const char *
-cli_verify_help(void)
+cli_verify_help(bool full)
 {
-	return ("verify pubkey signature");
+	const char *fullmsg = ""
+	"asignify [global_opts] verify - verifies signature\n\n"
+	"Usage: asignify verify <pubkey> <signature>\n"
+	"\tpubkey:\t\tPath to a public key file to check signature against\n"
+	"\tsignature:\t\tPath to signature file to check\n";
+
+	if (!full) {
+		return ("verify pubkey signature");
+	}
+
+	return (fullmsg);
 }
 
 int
@@ -78,9 +88,20 @@ cli_verify(int argc, char **argv)
 }
 
 const char *
-cli_check_help(void)
+cli_check_help(bool full)
 {
-	return ("check pubkey signature file [file ...]");
+	const char *fullmsg = ""
+	"asignify [global_opts] check - verifies signature and check external files validtiy\n\n"
+	"Usage: asignify check <pubkey> <signature> <file>...\n"
+	"\tpubkey:\t\tPath to a public key file to check signature against\n"
+	"\tsignature:\t\tPath to signature file to check\n"
+	"\tfile:\t\tA file that is recorded in the signature digests\n";
+
+	if (!full) {
+		return ("check pubkey signature file [file...]");
+	}
+
+	return (fullmsg);
 }
 
 int

@@ -64,9 +64,23 @@ read_password(char *buf, size_t len, void *d)
 }
 
 const char *
-cli_sign_help(void)
+cli_sign_help(bool full)
 {
-	return ("sign [-n] [-d <digest>] secretkey signature [file1 [file2...]]");
+
+	const char *fullmsg = ""
+		"asignify [global_opts] sign - creates a signature\n\n"
+		"Usage: asignify sign [-n] [-d <digest>...] <secretkey> <signature> [file1 [file2...]]\n"
+		"\t-n:\t\tDo not record files sizes\n"
+		"\t-d:\t\tWrite specific digest (sha256, sha512, blake2)\n"
+		"\tsecretkey:\t\tPath to a secret key file make a signature\n"
+		"\tsignature:\t\tPath to signature file to write\n"
+		"\tfile:\t\tA file that will be recorded in the signature digests\n";
+
+	if (!full) {
+		return ("sign [-n] [-d <digest>] secretkey signature [file1 [file2...]]");
+	}
+
+	return (fullmsg);
 }
 
 int
