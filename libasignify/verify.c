@@ -87,8 +87,8 @@ asignify_verify_load_sig(struct asignify_verify_ctx *ctx, FILE *f, size_t *len)
 	return (res.a);
 }
 
-static enum asignify_digest_type
-asignify_verify_parse_digest_type(const char *data, ssize_t dlen)
+enum asignify_digest_type
+asignify_digest_from_str(const char *data, ssize_t dlen)
 {
 	if (dlen == sizeof("SHA512") - 1) {
 		if (strncasecmp(data, "sha512", dlen) == 0) {
@@ -217,7 +217,7 @@ asignify_verify_parse_files(struct asignify_verify_ctx *ctx, const char *data,
 			else {
 				if (*p == ' ') {
 					/* Check algorithm */
-					dig_type = asignify_verify_parse_digest_type(c, p - c);
+					dig_type = asignify_digest_from_str(c, p - c);
 					if (dig_type == ASIGNIFY_DIGEST_MAX) {
 						state = PARSE_ERROR;
 					}

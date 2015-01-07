@@ -166,6 +166,37 @@ bool asignify_generate(const char *privkf, const char *pubkf,
  */
 void explicit_memzero(void * const pnt, const size_t len);
 
+/**
+ * Returns size of specified digest
+ * @param type type of digest
+ * @return size of digest or 0 if it is invalid
+ */
+unsigned int asignify_digest_len(enum asignify_digest_type type);
+
+/**
+ * Get name of the specified digest
+ * @param type type of digest
+ * @return symbolic name or NULL, this string must not be modified
+ */
+const char * asignify_digest_name(enum asignify_digest_type type);
+
+/**
+ * Calculates specific digest for a file represented by an open fd
+ * @param type type of digest
+ * @param fd file descriptor
+ * @return allocated binary chunk with the digest or NULL in case of failure (this blob must be freed after use)
+ */
+unsigned char* asignify_digest_fd(enum asignify_digest_type type, int fd);
+
+/**
+ * Parse string and returns the digest type
+ * @param data string to parse
+ * @param dlen size of string
+ * @return valid digest id or ASIGNIFY_DIGEST_MAX in case of failure
+ */
+enum asignify_digest_type asignify_digest_from_str(const char *data,
+	ssize_t dlen);
+
 #if defined(__cplusplus)
 }
 #endif

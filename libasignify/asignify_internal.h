@@ -107,10 +107,6 @@ int hex2bin(unsigned char * const bin, const size_t bin_maxlen,
 char * bin2hex(char * const hex, const size_t hex_maxlen,
 	const unsigned char * const bin, const size_t bin_len);
 
-unsigned int asignify_digest_len(enum asignify_digest_type type);
-const char * asignify_digest_name(enum asignify_digest_type type);
-unsigned char* asignify_digest_fd(enum asignify_digest_type type, int fd);
-
 enum asignify_error {
 	ASIGNIFY_ERROR_OK = 0,
 	ASIGNIFY_ERROR_NO_PUBKEY,
