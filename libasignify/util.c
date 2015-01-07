@@ -49,13 +49,15 @@
 #include "asignify_internal.h"
 
 const char* err_str[ASIGNIFY_ERROR_MAX] = {
-	[ASIGNIFY_ERROR_OK] = "No error",
-	[ASIGNIFY_ERROR_FILE] = "File IO error",
-	[ASIGNIFY_ERROR_FORMAT] = "Incorrect data format",
-	[ASIGNIFY_ERROR_MISUSE] = "Library is used incorrectly",
-	[ASIGNIFY_ERROR_VERIFY] = "Signature verification error",
-	[ASIGNIFY_ERROR_VERIFY_DIGEST] = "Digest verification error",
-	[ASIGNIFY_ERROR_SIZE] = "Size missmatch"
+	[ASIGNIFY_ERROR_OK] = "no error",
+	[ASIGNIFY_ERROR_FILE] = "file IO error",
+	[ASIGNIFY_ERROR_FORMAT] = "incorrect data format",
+	[ASIGNIFY_ERROR_PASSWORD] = "wrong password",
+	[ASIGNIFY_ERROR_MISUSE] = "library is used incorrectly",
+	[ASIGNIFY_ERROR_VERIFY] = "signature verification error",
+	[ASIGNIFY_ERROR_VERIFY_DIGEST] = "digest verification error",
+	[ASIGNIFY_ERROR_NO_DIGEST] = "digest is missing for the file specified",
+	[ASIGNIFY_ERROR_SIZE] = "size mismatch"
 };
 
 #ifdef HAVE_WEAK_SYMBOLS

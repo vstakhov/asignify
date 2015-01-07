@@ -52,8 +52,8 @@ read_password_verify(char *buf, size_t len, void *d)
 	char password[512], repeat[512];
 	int l1, l2;
 
-	if (readpassphrase("Password:", password, sizeof(password), 0) != NULL) {
-		if (readpassphrase("Verify:", repeat, sizeof(repeat), 0) != NULL) {
+	if (readpassphrase("Password: ", password, sizeof(password), 0) != NULL) {
+		if (readpassphrase("Verify: ", repeat, sizeof(repeat), 0) != NULL) {
 			l1 = strlen(password);
 			l2 = strlen(repeat);
 			if (l1 == l2 && l1 <= len) {
@@ -66,7 +66,7 @@ read_password_verify(char *buf, size_t len, void *d)
 				}
 			}
 			if (!quiet) {
-				fprintf(stderr, "passwords mismatch");
+				fprintf(stderr, "Password and verify mismatch\n");
 			}
 		}
 	}

@@ -489,6 +489,9 @@ asignify_verify_file(asignify_verify_t *ctx, const char *checkf)
 
 		return (true);
 	}
+	else {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_NO_DIGEST);
+	}
 
 	return (false);
 }

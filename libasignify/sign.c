@@ -65,6 +65,7 @@ asignify_sign_load_privkey(asignify_sign_t *ctx, const char *privf,
 {
 	FILE *f;
 	bool ret = false;
+	int error = ASIGNIFY_ERROR_FORMAT;
 
 	if (ctx == NULL || privf == NULL) {
 		return (false);
@@ -75,9 +76,9 @@ asignify_sign_load_privkey(asignify_sign_t *ctx, const char *privf,
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
 	}
 	else {
-		ctx->privk = asignify_private_data_load(f, password_cb, d);
+		ctx->privk = asignify_private_data_load(f, &error, password_cb, d);
 		if (ctx->privk == NULL) {
-			ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
+			ctx->error = xerr_string(error);
 		}
 		else {
 			ret = true;

@@ -387,7 +387,7 @@ asignify_pkey_to_private_data(struct asignify_private_key *privk,
 }
 
 struct asignify_private_data*
-asignify_private_data_unpack_key(struct asignify_private_key *privk,
+asignify_private_data_unpack_key(struct asignify_private_key *privk, int *error,
 	asignify_password_cb password_cb, void *d)
 {
 	unsigned char canary[10];
@@ -441,6 +441,11 @@ asignify_private_data_unpack_key(struct asignify_private_key *privk,
 			explicit_memzero(privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
 			asignify_privkey_cleanup(privk);
 			free(priv);
+
+			if (error != NULL) {
+				*error = ASIGNIFY_ERROR_PASSWORD;
+			}
+
 			return (NULL);
 		}
 		asignify_pkey_to_private_data(privk, priv);
@@ -455,7 +460,8 @@ asignify_private_data_unpack_key(struct asignify_private_key *privk,
 }
 
 struct asignify_private_data*
-asignify_private_data_load(FILE *f, asignify_password_cb password_cb, void *d)
+asignify_private_data_load(FILE *f, int *error,
+	asignify_password_cb password_cb, void *d)
 {
 	char *buf = NULL;
 	size_t buflen = 0;
@@ -488,7 +494,7 @@ asignify_private_data_load(FILE *f, asignify_password_cb password_cb, void *d)
 		return (NULL);
 	}
 
-	return (asignify_private_data_unpack_key(&privk, password_cb, d));
+	return (asignify_private_data_unpack_key(&privk, error, password_cb, d));
 }
 
 void

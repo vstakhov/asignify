@@ -117,6 +117,7 @@ enum asignify_error {
 	ASIGNIFY_ERROR_VERIFY,
 	ASIGNIFY_ERROR_SIZE,
 	ASIGNIFY_ERROR_VERIFY_DIGEST,
+	ASIGNIFY_ERROR_NO_DIGEST,
 	ASIGNIFY_ERROR_MISUSE,
 	ASIGNIFY_ERROR_MAX
 };
@@ -136,7 +137,7 @@ void asignify_public_data_free(struct asignify_public_data *d);
 /*
  * Common secret data operations
  */
-struct asignify_private_data* asignify_private_data_load(FILE *f,
+struct asignify_private_data* asignify_private_data_load(FILE *f, int *error,
 	asignify_password_cb password_cb, void *d);
 void asignify_private_data_free(struct asignify_private_data *d);
 bool asignify_privkey_write(struct asignify_private_key *privk, FILE *f);
