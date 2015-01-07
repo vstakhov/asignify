@@ -99,16 +99,35 @@ void help(bool failed, int argc, char **argv)
 int
 main(int argc, char **argv)
 {
-	int ch, ret = -1;
+	int ch, ret = -1, i;
 	static struct option long_options[] = {
 		{"quiet",   no_argument,       0,  'q' },
 		{"help", 	no_argument,       0,  'h' },
 		{"version",	no_argument,       0,  'v' },
 		{0,         0,                 0,  0 }
 	};
+	char **our_argv;
+	int our_argc;
 
+	/*
+	 * Workaround to fix lack of brain of glibc authors:
+	 * getopt_long there tries to eat everything not stopping on arguments,
+	 * therefore, we need to stop that mess manually
+	 */
+	our_argv = malloc(argc * sizeof(char *));
+	our_argv[0] = argv[0];
+	our_argc = 1;
 
-	while ((ch = getopt_long(argc, argv, "qhv", long_options, NULL)) != -1) {
+	for (i = 1; i < argc; i ++) {
+		if (argv[i] != NULL && *argv[i] == '-') {
+			our_argv[our_argc++] = argv[i];
+		}
+		else {
+			break;
+		}
+	}
+
+	while ((ch = getopt_long(our_argc, our_argv, "qhv", long_options, NULL)) != -1) {
 		switch (ch) {
 		case 'q':
 			quiet = 1;
@@ -128,17 +147,25 @@ main(int argc, char **argv)
 		usage("must specify at least one command");
 	}
 
+	/* reset getopt for the next call */
+#ifdef __GLIBC__
+	optind = 0;
+#else
+	optreset = 1;
+	optind = 1;
+#endif
+
 	if (strcasecmp(argv[0], "check") == 0) {
-		ret = cli_check(argc - 1, argv + 1);
+		ret = cli_check(argc, argv);
 	}
 	else if (strcasecmp(argv[0], "verify") == 0) {
-		ret = cli_verify(argc - 1, argv + 1);
+		ret = cli_verify(argc, argv);
 	}
 	else if (strcasecmp(argv[0], "sign") == 0) {
-		ret = cli_sign(argc - 1, argv + 1);
+		ret = cli_sign(argc, argv);
 	}
 	else if (strcasecmp(argv[0], "generate") == 0) {
-		ret = cli_generate(argc - 1, argv + 1);
+		ret = cli_generate(argc, argv);
 	}
 	else if (strcasecmp(argv[0], "help") == 0) {
 		help(false, argc - 1, argv + 1);
