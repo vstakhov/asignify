@@ -70,11 +70,11 @@ cli_sign_help(bool full)
 	const char *fullmsg = ""
 		"asignify [global_opts] sign - creates a signature\n\n"
 		"Usage: asignify sign [-n] [-d <digest>...] <secretkey> <signature> [file1 [file2...]]\n"
-		"\t-n:\t\tDo not record files sizes\n"
-		"\t-d:\t\tWrite specific digest (sha256, sha512, blake2)\n"
-		"\tsecretkey:\t\tPath to a secret key file make a signature\n"
-		"\tsignature:\t\tPath to signature file to write\n"
-		"\tfile:\t\tA file that will be recorded in the signature digests\n";
+		"\t-n            Do not record files sizes\n"
+		"\t-d            Write specific digest (sha256, sha512, blake2)\n"
+		"\tsecretkey     Path to a secret key file make a signature\n"
+		"\tsignature     Path to signature file to write\n"
+		"\tfile          A file that will be recorded in the signature digests\n";
 
 	if (!full) {
 		return ("sign [-n] [-d <digest>] secretkey signature [file1 [file2...]]");
