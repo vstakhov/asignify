@@ -60,12 +60,13 @@ cli_verify(int argc, char **argv)
 	asignify_verify_t *vrf;
 	const char *pubkeyfile = NULL, *sigfile = NULL;
 
-	if (argc != 2) {
+	if (argc != 3) {
 		return (0);
 	}
 
-	pubkeyfile = argv[0];
-	sigfile = argv[1];
+	/* Argv[0] == "verify" */
+	pubkeyfile = argv[1];
+	sigfile = argv[2];
 
 	vrf = asignify_verify_init();
 	if (!asignify_verify_load_pubkey(vrf, pubkeyfile)) {
@@ -111,12 +112,12 @@ cli_check(int argc, char **argv)
 	const char *pubkeyfile = NULL, *sigfile = NULL;
 	int i;
 
-	if (argc < 3) {
+	if (argc < 4) {
 		return (0);
 	}
 
-	pubkeyfile = argv[0];
-	sigfile = argv[1];
+	pubkeyfile = argv[1];
+	sigfile = argv[2];
 
 	vrf = asignify_verify_init();
 	if (!asignify_verify_load_pubkey(vrf, pubkeyfile)) {
@@ -133,7 +134,7 @@ cli_check(int argc, char **argv)
 		return (-1);
 	}
 
-	for (i = 2; i < argc; i ++) {
+	for (i = 3; i < argc; i ++) {
 		if (!asignify_verify_file(vrf, argv[i])) {
 			fprintf(stderr, "cannot check file %s: %s", argv[i],
 				asignify_verify_get_error(vrf));

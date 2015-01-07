@@ -83,15 +83,60 @@ cli_sign_help(bool full)
 	return (fullmsg);
 }
 
+struct digest_item {
+	enum asignify_digest_type type;
+	struct digest_item *next;
+};
+
 int
 cli_sign(int argc, char **argv)
 {
 	asignify_sign_t *sgn;
 	const char *seckeyfile = NULL, *sigfile = NULL;
 	int i;
+	int ch;
+	bool no_size = false;
+	/* XXX: we do not free this list on exit */
+	struct digest_item *dt_list = NULL, *dtit;
+	enum asignify_digest_type dt;
+	static struct option long_options[] = {
+		{"no-size",   no_argument,     0,  'n' },
+		{"digest", 	required_argument, 0,  'd' },
+		{0,         0,                 0,  0 }
+	};
+
+	while ((ch = getopt_long(argc, argv, "nd:", long_options, NULL)) != -1) {
+		switch (ch) {
+		case 'n':
+			no_size = true;
+			break;
+		case 'd':
+			dt = asignify_digest_from_str(optarg, strlen(optarg));
+			if (dt == ASIGNIFY_DIGEST_MAX) {
+				fprintf(stderr, "bad digest type: %s\n", optarg);
+				return (0);
+			}
+			dtit = malloc(sizeof(*dtit));
+			dtit->type = dt;
+			dtit->next = dt_list;
+			dt_list = dtit;
+			break;
+		default:
+			return (0);
+			break;
+		}
+	}
+	argc -= optind;
+	argv += optind;
 
 	if (argc < 2) {
 		return (0);
+	}
+
+	if (dt_list == NULL) {
+		dt_list = malloc(sizeof(*dt_list));
+		dt_list->next = NULL;
+		dt_list->type = ASIGNIFY_DIGEST_BLAKE2;
 	}
 
 	seckeyfile = argv[0];
@@ -107,11 +152,23 @@ cli_sign(int argc, char **argv)
 	}
 
 	for (i = 2; i < argc; i ++) {
-		if (!asignify_sign_add_file(sgn, argv[i], ASIGNIFY_DIGEST_BLAKE2)) {
-			fprintf(stderr, "cannot sign file %s: %s", argv[i],
-				asignify_sign_get_error(sgn));
-			asignify_sign_free(sgn);
-			return (-1);
+		dtit = dt_list;
+		while(dtit != NULL) {
+			if (!asignify_sign_add_file(sgn, argv[i], dtit->type)) {
+				fprintf(stderr, "cannot sign file %s: %s", argv[i],
+					asignify_sign_get_error(sgn));
+				asignify_sign_free(sgn);
+				return (-1);
+			}
+			dtit = dtit->next;
+		}
+		if (!no_size) {
+			if (!asignify_sign_add_file(sgn, argv[i], ASIGNIFY_DIGEST_SIZE)) {
+				fprintf(stderr, "cannot sign file %s: %s", argv[i],
+					asignify_sign_get_error(sgn));
+				asignify_sign_free(sgn);
+				return (-1);
+			}
 		}
 	}
 
