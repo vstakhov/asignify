@@ -113,7 +113,7 @@ cli_check(int argc, char **argv)
 {
 	asignify_verify_t *vrf;
 	const char *pubkeyfile = NULL, *sigfile = NULL;
-	int i;
+	int i, ret = 1;
 
 	if (argc < 4) {
 		return (0);
@@ -144,8 +144,7 @@ cli_check(int argc, char **argv)
 		if (!asignify_verify_file(vrf, argv[i])) {
 			fprintf(stderr, "cannot check file %s: %s\n", argv[i],
 				asignify_verify_get_error(vrf));
-			asignify_verify_free(vrf);
-			return (-1);
+			ret = -1;
 		}
 		else if (!quiet) {
 			printf("file %s has been verified\n", argv[i]);
@@ -154,5 +153,5 @@ cli_check(int argc, char **argv)
 
 	asignify_verify_free(vrf);
 
-	return (1);
+	return (ret);
 }
