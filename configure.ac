@@ -109,7 +109,7 @@ dnl Libtool is used for building share libraries
 AC_PROG_LIBTOOL
 
 AC_CONFIG_FILES(Makefile
-                bin/Makefile
+                src/Makefile
                 libasignify/Makefile
                 include/Makefile)
 AC_CONFIG_HEADERS(config.h)
