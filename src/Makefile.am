@@ -1,8 +1,12 @@
-noinst_HEADERS= readpassphrase_compat.h
+noinst_HEADERS= readpassphrase_compat.h \
+			cli.h
 
 bin_PROGRAMS=asignify
  
-asignify_SOURCES= asignify.c
+asignify_SOURCES= asignify.c \
+				verify.c \
+				sign.c \
+				generate.c
 
 asignify_LDFLAGS = $(top_srcdir)/libasignify/libasignify.la \
 			@OPENSSL_LDFLAGS@ \

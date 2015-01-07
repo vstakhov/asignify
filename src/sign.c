@@ -38,78 +38,77 @@
 #include "asignify.h"
 #include "cli.h"
 
-int quiet = 0;
+#ifdef HAVE_READPASSPHRASE_H
+#include <readpassphrase.h>
+#elif defined(HAVE_BSD_READPASSPHRASE_H)
+#include <bsd/readpassphrase.h>
+#else
+#include "readpassphrase_compat.h"
+#endif
 
-static void
-usage(const char *error)
+static int
+read_password(char *buf, size_t len, void *d)
 {
-	if (error)
-		fprintf(stderr, "%s\n", error);
+	char password[512];
+	int l;
 
-	fprintf(stderr, "usage:"
-	    "\tasignify [-q] %s\n"
-	    "\tasignify [-q] %s\n"
-	    "\tasignify [-q] %s\n"
-	    "\tasignify [-q] %s\n",
-	    cli_verify_help(), cli_check_help(), cli_sign_help(), cli_generate_help());
+	if (readpassphrase("Password:", password, sizeof(password), 0) != NULL) {
+		l = strlen(password);
+		memcpy(buf, password, l);
+		explicit_memzero(password, sizeof(password));
 
-	exit(EXIT_FAILURE);
+		return (l);
+	}
+
+	return (-1);
+}
+
+const char *
+cli_sign_help(void)
+{
+	return ("sign [-n] [-d <digest>] secretkey signature [file1 [file2...]]");
 }
 
 int
-main(int argc, char **argv)
+cli_sign(int argc, char **argv)
 {
-	int ch, ret = -1;
-	static struct option long_options[] = {
-		{"quiet",   no_argument,       0,  'q' },
-		{"help", 	no_argument,       0,  'h' },
-		{"version",	no_argument,       0,  'v' },
-		{0,         0,                 0,  0 }
-	};
+	asignify_sign_t *sgn;
+	const char *seckeyfile = NULL, *sigfile = NULL;
+	int i;
 
+	if (argc < 2) {
+		return (0);
+	}
 
-	while ((ch = getopt_long(argc, argv, "qhv", long_options, NULL)) != -1) {
-		switch (ch) {
-		case 'q':
-			quiet = 1;
-			break;
-		case 'h':
-		case 'v':
-		default:
-			usage(NULL);
-			break;
+	seckeyfile = argv[0];
+	sigfile = argv[1];
+
+	sgn = asignify_sign_init();
+
+	if (!asignify_sign_load_privkey(sgn, seckeyfile, read_password, NULL)) {
+		fprintf(stderr, "cannot load private key %s: %s", seckeyfile,
+			asignify_sign_get_error(sgn));
+		asignify_sign_free(sgn);
+		return (-1);
+	}
+
+	for (i = 2; i < argc; i ++) {
+		if (!asignify_sign_add_file(sgn, argv[i], ASIGNIFY_DIGEST_BLAKE2)) {
+			fprintf(stderr, "cannot sign file %s: %s", argv[i],
+				asignify_sign_get_error(sgn));
+			asignify_sign_free(sgn);
+			return (-1);
 		}
 	}
-	argc -= optind;
-	argv += optind;
 
-	/* Read command as the next argument */
-	if (argc == 0) {
-		usage("must specify at least one command");
-	}
-
-	if (strcasecmp(argv[0], "check") == 0) {
-		ret = cli_check(argc - 1, argv + 1);
-	}
-	else if (strcasecmp(argv[0], "verify") == 0) {
-		ret = cli_verify(argc - 1, argv + 1);
-	}
-	else if (strcasecmp(argv[0], "sign") == 0) {
-		ret = cli_sign(argc - 1, argv + 1);
-	}
-	else if (strcasecmp(argv[0], "generate") == 0) {
-		ret = cli_generate(argc - 1, argv + 1);
-	}
-	else if (strcasecmp(argv[0], "help") == 0) {
-		usage(NULL);
+	if (!asignify_sign_write_signature(sgn, sigfile)) {
+		fprintf(stderr, "cannot write sign file %s: %s", sigfile,
+			asignify_sign_get_error(sgn));
+		asignify_sign_free(sgn);
+		return (-1);
 	}
 
-	if (ret == 0) {
-		usage(NULL);
-	}
-	else if (ret == -1) {
-		exit(EXIT_FAILURE);
-	}
+	asignify_sign_free(sgn);
 
-	return (EXIT_SUCCESS);
+	return (1);
 }
