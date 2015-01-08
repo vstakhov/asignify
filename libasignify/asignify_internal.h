@@ -93,6 +93,7 @@ int pkcs5_pbkdf2(const char *pass, size_t pass_len, const uint8_t *salt,
 FILE * xfopen(const char *fname, const char *mode);
 int xopen(const char *fname, int oflags, mode_t mode);
 void * xmalloc(size_t len);
+void * xmalloc_aligned(size_t align, size_t len);
 void * xmalloc0(size_t len);
 char * xstrdup(const char *str);
 

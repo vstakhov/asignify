@@ -206,6 +206,21 @@ xmalloc0(size_t len)
 	return (p);
 }
 
+void *
+xmalloc_aligned(size_t align, size_t len)
+{
+	void *p;
+
+	if (align > len || len >= SIZE_MAX / 2) {
+		abort();
+	}
+
+	if ((posix_memalign(&p, align, len))) {
+		abort();
+	}
+	return (p);
+}
+
 char *
 xstrdup(const char *str)
 {
@@ -398,7 +413,7 @@ asignify_digest_init(enum asignify_digest_type type)
 #endif
 		break;
 	case ASIGNIFY_DIGEST_BLAKE2:
-		bst = xmalloc(sizeof(*bst));
+		bst = xmalloc_aligned(64, sizeof(*bst));
 		blake2b_init(bst, BLAKE2B_OUTBYTES);
 		res = bst;
 		break;
