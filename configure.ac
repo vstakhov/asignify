@@ -101,8 +101,13 @@ if test "$ac_cv_func_arc4random_uniform" = yes ; then
 	AC_DEFINE(HAVE_ARC4RANDOM, 1, [Define 1 if you have 'arc4random_uniform' function.])
 fi
 
-AX_CHECK_OPENSSL([
-	AC_DEFINE(HAVE_OPENSSL, 1, [Define 1 if you have openssl.])], [])
+AC_ARG_ENABLE([openssl],
+    AS_HELP_STRING([--enable-openssl], [Use openssl for faster hashes computation]))
+AS_IF([test "x$enable_openssl" = "xyes"],
+	[AX_CHECK_OPENSSL([
+		AC_DEFINE(HAVE_OPENSSL, 1, [Define 1 if you have openssl.])], []
+	)]
+)
 
 dnl Check if Libtool is present
 dnl Libtool is used for building share libraries 
