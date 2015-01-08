@@ -382,7 +382,7 @@ asignify_digest_init(enum asignify_digest_type type)
 		res = mdctx;
 #else
 		st = xmalloc(sizeof(*st));
-		SHA512Init(&st);
+		SHA512Init(st);
 		res = st;
 #endif
 		break;
@@ -393,7 +393,7 @@ asignify_digest_init(enum asignify_digest_type type)
 		res = mdctx;
 #else
 		st = xmalloc(sizeof(*st));
-		SHA256Init(&st);
+		SHA256Init(st);
 		res = st;
 #endif
 		break;
@@ -428,7 +428,7 @@ asignify_digest_update(enum asignify_digest_type type, void *ctx,
 			EVP_DigestUpdate(mdctx, buf, len);
 #else
 			st = (SHA2_CTX *)ctx;
-			SHA512Update(ctx, buf, len);
+			SHA512Update(st, buf, len);
 #endif
 			break;
 		case ASIGNIFY_DIGEST_SHA256:
@@ -437,7 +437,7 @@ asignify_digest_update(enum asignify_digest_type type, void *ctx,
 			EVP_DigestUpdate(mdctx, buf, len);
 #else
 			st = (SHA2_CTX *)ctx;
-			SHA256Update(ctx, buf, len);
+			SHA256Update(st, buf, len);
 #endif
 			break;
 		case ASIGNIFY_DIGEST_BLAKE2:
