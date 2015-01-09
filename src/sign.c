@@ -194,7 +194,7 @@ cli_sign(int argc, char **argv)
 	asignify_sign_free(sgn);
 
 	if (!quiet) {
-		if (ret == 0) {
+		if (ret == 1) {
 			printf("Digests file %s has been successfully signed\n", sigfile);
 		}
 		else {
