@@ -84,6 +84,8 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 	AC_DEFINE([HAVE_WEAK_SYMBOLS], [1], [weak symbols are supported])],
 	[AC_MSG_RESULT(no)])
 
+AC_CHECK_FUNCS([posix_memalign aligned_alloc valloc])
+
 dnl Capsicum support
 AC_CHECK_HEADERS_ONCE([sys/capability.h])
 AC_CHECK_HEADERS_ONCE([sys/capsicum.h])

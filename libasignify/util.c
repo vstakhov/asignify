@@ -210,14 +210,34 @@ void *
 xmalloc_aligned(size_t align, size_t len)
 {
 	void *p;
+	unsigned int v = (unsigned int)len;
 
-	if (align > len || len >= SIZE_MAX / 2) {
+	v--;
+	v |= v >> 1;
+	v |= v >> 2;
+	v |= v >> 4;
+	v |= v >> 8;
+	v |= v >> 16;
+	v++;
+
+	if (align > len || len >= UINT32_MAX / 2 || (v & (v - 1)) != 0) {
 		abort();
 	}
 
-	if ((posix_memalign(&p, align, len))) {
+#ifdef HAVE_POSIX_MEMALIGN
+	if ((posix_memalign(&p, align, v))) {
 		abort();
 	}
+#elif defined(HAVE_ALIGNED_ALLOC)
+	if (!(p = aligned_alloc(align, v))) {
+		abort();
+	}
+#else
+#warning No aligned alloc function found
+	if (!(p = malloc(v))) {
+		abort();
+	}
+#endif
 	return (p);
 }
 
