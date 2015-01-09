@@ -95,6 +95,8 @@ cli_sign(int argc, char **argv)
 	const char *seckeyfile = NULL, *sigfile = NULL;
 	int i;
 	int ch;
+	int ret = 1;
+	int added = 0;
 	bool no_size = false;
 	/* XXX: we do not free this list on exit */
 	struct digest_item *dt_list = NULL, *dtit;
@@ -157,23 +159,29 @@ cli_sign(int argc, char **argv)
 			if (!asignify_sign_add_file(sgn, argv[i], dtit->type)) {
 				fprintf(stderr, "cannot sign file %s: %s\n", argv[i],
 					asignify_sign_get_error(sgn));
-				asignify_sign_free(sgn);
-				return (-1);
+				ret = -1;
 			}
-			else if (!quiet) {
-				printf("added %s digest of %s\n",
-					asignify_digest_name(dtit->type), argv[i]);
+			else {
+				if (!quiet) {
+					printf("added %s digest of %s\n",
+							asignify_digest_name(dtit->type), argv[i]);
+				}
+				added ++;
 			}
 			dtit = dtit->next;
 		}
 		if (!no_size) {
 			if (!asignify_sign_add_file(sgn, argv[i], ASIGNIFY_DIGEST_SIZE)) {
-				fprintf(stderr, "cannot sign file %s: %s\n", argv[i],
+				fprintf(stderr, "cannot calculated file size %s: %s\n", argv[i],
 					asignify_sign_get_error(sgn));
-				asignify_sign_free(sgn);
-				return (-1);
+				ret = -1;
 			}
 		}
+	}
+
+	if (added == 0) {
+		fprintf(stderr, "no digests has been added to the signature");
+		return (-1);
 	}
 
 	if (!asignify_sign_write_signature(sgn, sigfile)) {
@@ -186,8 +194,13 @@ cli_sign(int argc, char **argv)
 	asignify_sign_free(sgn);
 
 	if (!quiet) {
-		printf("Signature file %s has been successfully signed\n", sigfile);
+		if (ret == 0) {
+			printf("Digests file %s has been successfully signed\n", sigfile);
+		}
+		else {
+			printf("Digests file %s has been signed but some files were not added due to errors\n", sigfile);
+		}
 	}
 
-	return (1);
+	return (ret);
 }
