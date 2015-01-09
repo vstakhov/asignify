@@ -410,6 +410,7 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 			if (!asignify_pubkey_check_signature(ctx->pk, sig, data, dlen)) {
 				asignify_public_data_free(sig);
 				free(data);
+				ctx->error = xerr_string(ASIGNIFY_ERROR_VERIFY);
 				return (false);
 			}
 
@@ -518,15 +519,17 @@ asignify_verify_free(asignify_verify_t *ctx)
 	if (ctx) {
 		asignify_public_data_free(ctx->pk);
 
-		for (k = kh_begin(ctx->files); k != kh_end(ctx->files); ++k) {
-			if (kh_exist(ctx->files, k)) {
-				f = kh_value(ctx->files, k);
-				for(d = f->digests; d && (dtmp = d->next, 1); d = dtmp) {
-					free(d->digest);
-					free(d);
+		if (ctx->files) {
+			for (k = kh_begin(ctx->files); k != kh_end(ctx->files); ++k) {
+				if (kh_exist(ctx->files, k)) {
+					f = kh_value(ctx->files, k);
+					for(d = f->digests; d && (dtmp = d->next, 1); d = dtmp) {
+						free(d->digest);
+						free(d);
+					}
+					free(f->fname);
+					free(f);
 				}
-				free(f->fname);
-				free(f);
 			}
 		}
 
