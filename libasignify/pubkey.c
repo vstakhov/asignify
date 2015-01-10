@@ -40,6 +40,8 @@
 #define PUBKEY_VER_MAX 1
 #define PUBKEY_KEY_LEN crypto_sign_ed25519_PUBLICKEYBYTES
 
+#define SSH_KEY_MAGIC "ssh-ed25519"
+
 struct obsd_pubkey {
 	uint8_t pkalg[2];
 	uint8_t keynum[8];
@@ -82,6 +84,61 @@ asignify_pubkey_try_obsd(const char *buf, size_t buflen,
 	return (false);
 }
 
+static bool
+asignify_pubkey_try_ssh(const char *buf, size_t buflen,
+	struct asignify_public_data **pk)
+{
+	unsigned char pkbuf[crypto_sign_ed25519_PUBLICKEYBYTES * 2];
+	const unsigned char *tok, *bpos;
+	const char *p = buf;
+	unsigned int tlen;
+	int remain;
+	struct asignify_public_data *res;
+
+	p = buf + sizeof(SSH_KEY_MAGIC) - 1;
+
+	if (*p != ' ') {
+		return (false);
+	}
+
+	p ++;
+
+	if ((remain = b64_pton_stop(p, pkbuf, sizeof(pkbuf), " ")) <= 0) {
+		return (false);
+	}
+
+	bpos = pkbuf;
+	if ((tok = asignify_ssh_read_string(bpos, &tlen, remain, &bpos)) == NULL) {
+		return (false);
+	}
+
+	/* First of all the algorithm name is encoded */
+	if (tlen != sizeof(SSH_KEY_MAGIC) - 1 || memcmp(tok, SSH_KEY_MAGIC,
+			sizeof(SSH_KEY_MAGIC) - 1) != 0) {
+		/* Wrong blob */
+		return (false);
+	}
+
+	remain -= tlen + 4;
+
+	if ((tok = asignify_ssh_read_string(bpos, &tlen, remain, &bpos)) == NULL) {
+		return (false);
+	}
+
+	if (tlen == crypto_sign_ed25519_PUBLICKEYBYTES) {
+		res = xmalloc(sizeof(*res));
+		res->version = 1;
+		res->data_len = sizeof(crypto_sign_ed25519_PUBLICKEYBYTES);
+		res->id_len = 0;
+		asignify_alloc_public_data_fields(res);
+		memcpy(res->data, tok, res->data_len);
+
+		*pk = res;
+	}
+
+	return (true);
+}
+
 struct asignify_public_data*
 asignify_pubkey_load(FILE *f)
 {
@@ -96,27 +153,29 @@ asignify_pubkey_load(FILE *f)
 	}
 
 	while ((r = getline(&buf, &buflen, f)) != -1) {
-		if (first && r > sizeof(PUBKEY_MAGIC)) {
-			first = false;
-
-			/* Check for asignify pubkey */
-			if (memcmp(buf, PUBKEY_MAGIC, sizeof(PUBKEY_MAGIC) - 1) == 0) {
+		if (r > sizeof(PUBKEY_MAGIC)) {
+			if (first && memcmp(buf, PUBKEY_MAGIC, sizeof(PUBKEY_MAGIC) - 1) == 0) {
 				res = asignify_public_data_load(buf, r,
-					PUBKEY_MAGIC, sizeof(PUBKEY_MAGIC) - 1,
-					PUBKEY_VER_MAX, PUBKEY_VER_MAX,
-					KEY_ID_LEN, PUBKEY_KEY_LEN);
+						PUBKEY_MAGIC, sizeof(PUBKEY_MAGIC) - 1,
+						PUBKEY_VER_MAX, PUBKEY_VER_MAX,
+						KEY_ID_LEN, PUBKEY_KEY_LEN);
+				/* XXX: should we stop after the first public key read? */
 				break;
 			}
-			else {
-				/* We can have either openbsd pubkey or some garbage */
-				if (!asignify_pubkey_try_obsd(buf, r, &res)) {
-					break;
-				}
+		}
+		if (r > sizeof(SSH_KEY_MAGIC) &&
+				memcmp(buf, SSH_KEY_MAGIC, sizeof (SSH_KEY_MAGIC) - 1) == 0) {
+			/* Try ssh pubkey */
+			if (asignify_pubkey_try_ssh(buf, r, &res)) {
+				/* XXX: need to read all SSH keys */
+				break;
 			}
 		}
-		if (!asignify_pubkey_try_obsd(buf, r, &res)) {
+		else if (!asignify_pubkey_try_obsd(buf, r, &res)) {
 			break;
 		}
+
+		first = false;
 	}
 
 	return (res);
@@ -136,7 +195,7 @@ asignify_pubkey_check_signature(struct asignify_public_data *pk,
 	/* Check sanity */
 	if (pk->version != sig->version ||
 		pk->id_len != sig->id_len ||
-		memcmp(pk->id, sig->id, sig->id_len) != 0) {
+		(pk->id_len > 0 && memcmp(pk->id, sig->id, sig->id_len) != 0)) {
 		return (false);
 	}
 

@@ -116,7 +116,10 @@ void
 asignify_alloc_public_data_fields(struct asignify_public_data *pk)
 {
 	pk->data = xmalloc(pk->data_len);
-	pk->id = xmalloc(pk->id_len);
+
+	if (pk->id_len > 0) {
+		pk->id = xmalloc(pk->id_len);
+	}
 }
 
 /*
@@ -514,7 +517,7 @@ asignify_private_data_free(struct asignify_private_data *d)
 
 const unsigned char *
 asignify_ssh_read_string(const unsigned char *buf, unsigned int *str_len,
-		unsigned int remain, const unsigned char **npos)
+		unsigned int remain, unsigned char const **npos)
 {
 	unsigned int token_len;
 	unsigned const char *p = buf;
