@@ -46,8 +46,13 @@
 KHASH_INIT(asignify_verify_hnode, const char *, struct asignify_file *, 1,
 	kh_str_hash_func, kh_str_hash_equal);
 
-struct asignify_verify_ctx {
+struct asignify_pubkey_chain {
 	struct asignify_public_data *pk;
+	struct asignify_pubkey_chain *next;
+};
+
+struct asignify_verify_ctx {
+	struct asignify_pubkey_chain *pk_chain;
 	khash_t(asignify_verify_hnode) *files;
 	const char *error;
 };
@@ -353,7 +358,9 @@ bool
 asignify_verify_load_pubkey(asignify_verify_t *ctx, const char *pubf)
 {
 	FILE *f;
-	bool ret = false;
+	bool ret = true;
+	struct asignify_public_data *pk;
+	struct asignify_pubkey_chain *chain;
 
 	if (ctx == NULL) {
 		return (false);
@@ -364,12 +371,16 @@ asignify_verify_load_pubkey(asignify_verify_t *ctx, const char *pubf)
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
 	}
 	else {
-		ctx->pk = asignify_pubkey_load(f);
-		if (ctx->pk == NULL) {
+		pk = asignify_pubkey_load(f);
+		if (pk == NULL) {
 			ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
+			ret = false;
 		}
-		else {
-			ret = true;
+		else if (ret) {
+			chain = xmalloc(sizeof(*chain));
+			chain->pk = pk;
+			chain->next = ctx->pk_chain;
+			ctx->pk_chain = chain;
 		}
 	}
 
@@ -380,12 +391,13 @@ bool
 asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 {
 	struct asignify_public_data *sig;
+	struct asignify_pubkey_chain *chain;
 	unsigned char *data;
 	size_t dlen;
 	FILE *f;
 	bool ret = false;
 
-	if (ctx == NULL || ctx->pk == NULL) {
+	if (ctx == NULL || ctx->pk_chain == NULL) {
 		if (ctx) {
 			ctx->error = xerr_string(ASIGNIFY_ERROR_MISUSE);
 		}
@@ -398,7 +410,7 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 	}
 	else {
 		sig = asignify_signature_load(f);
-		if (ctx->pk == NULL) {
+		if (ctx->pk_chain == NULL) {
 			ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
 		}
 		else {
@@ -407,7 +419,12 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 				return (false);
 			}
 
-			if (!asignify_pubkey_check_signature(ctx->pk, sig, data, dlen)) {
+			chain = ctx->pk_chain;
+			while (chain != NULL && !ret) {
+				ret = asignify_pubkey_check_signature(chain->pk, sig, data, dlen);
+				chain = chain->next;
+			}
+			if (!ret) {
 				asignify_public_data_free(sig);
 				free(data);
 				ctx->error = xerr_string(ASIGNIFY_ERROR_VERIFY);
@@ -515,9 +532,18 @@ asignify_verify_free(asignify_verify_t *ctx)
 	khiter_t k;
 	struct asignify_file_digest *d, *dtmp;
 	struct asignify_file *f;
+	struct asignify_pubkey_chain *chain, *ctmp;
 
 	if (ctx) {
-		asignify_public_data_free(ctx->pk);
+
+		chain = ctx->pk_chain;
+
+		while (chain != NULL) {
+			asignify_public_data_free(chain->pk);
+			ctmp = chain;
+			chain = chain->next;
+			free(ctmp);
+		}
 
 		if (ctx->files) {
 			for (k = kh_begin(ctx->files); k != kh_end(ctx->files); ++k) {
