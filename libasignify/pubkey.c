@@ -126,7 +126,6 @@ bool
 asignify_pubkey_check_signature(struct asignify_public_data *pk,
 	struct asignify_public_data *sig, const unsigned char *data, size_t dlen)
 {
-	blake2b_state hs;
 	SHA2_CTX sh;
 	unsigned char h[crypto_sign_HASHBYTES];
 
@@ -161,17 +160,13 @@ asignify_pubkey_check_signature(struct asignify_public_data *pk,
 			if (pk->data_len == crypto_sign_PUBLICKEYBYTES &&
 					sig->data_len == crypto_sign_BYTES) {
 				/* ED25519 */
-				blake2b_init(&hs, crypto_sign_HASHBYTES);
-				/* ed25519 nonce */
-				blake2b_update(&hs, sig->data, 32);
-				/* public key */
-				blake2b_update(&hs, pk->data, pk->data_len);
-				/* version to prevent versioning attacks */
-				blake2b_update(&hs, (const uint8_t *)&sig->version,
-					sizeof(sig->version));
-				/* data part */
-				blake2b_update(&hs, data, dlen);
-				blake2b_final(&hs, h, sizeof(h));
+				SHA512Init(&sh);
+				SHA512Update(&sh, sig->data, 32);
+				SHA512Update(&sh, pk->data, 32);
+				SHA512Update(&sh, (const uint8_t *)&sig->version,
+									sizeof(sig->version));
+				SHA512Update(&sh, data, dlen);
+				SHA512Final(h, &sh);
 
 				if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data) == 0) {
 					return (true);
