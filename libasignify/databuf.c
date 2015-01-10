@@ -511,3 +511,33 @@ asignify_private_data_free(struct asignify_private_data *d)
 		free(d);
 	}
 }
+
+const unsigned char *
+asignify_ssh_read_string(const unsigned char *buf, unsigned int *str_len,
+		unsigned int remain, const unsigned char **npos)
+{
+	unsigned int token_len;
+	unsigned const char *p = buf;
+
+	if (buf == NULL || remain < 4) {
+		return (NULL);
+	}
+
+	/* Decode from little endian */
+	token_len = (p[0] << 3 | p[1] << 2 | p[2] << 1 | p[3]);
+
+	if (remain < token_len + 4) {
+		return (NULL);
+	}
+
+	p += 4;
+	if (npos != NULL) {
+		*npos = p + token_len;
+	}
+
+	if (str_len != NULL) {
+		*str_len = token_len;
+	}
+
+	return (p);
+}

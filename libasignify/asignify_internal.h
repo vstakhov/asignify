@@ -161,4 +161,10 @@ struct asignify_public_data* asignify_signature_load(FILE *f);
 bool asignify_signature_write(struct asignify_public_data *sig, const void *buf,
 	size_t len, FILE *f);
 
+/*
+ * SSH keys routines
+ */
+const unsigned char * asignify_ssh_read_string(const unsigned char *buf,
+		unsigned int *str_len, unsigned int remain, const unsigned char **npos);
+
 #endif /* ASIGNIFY_INTERNAL_H_ */
