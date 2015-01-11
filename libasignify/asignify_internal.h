@@ -166,5 +166,6 @@ bool asignify_signature_write(struct asignify_public_data *sig, const void *buf,
  */
 const unsigned char * asignify_ssh_read_string(const unsigned char *buf,
 		unsigned int *str_len, unsigned int remain, unsigned char const **npos);
+struct asignify_private_data* asignify_ssh_privkey_load(FILE *f, int *error);
 
 #endif /* ASIGNIFY_INTERNAL_H_ */

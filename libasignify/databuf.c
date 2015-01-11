@@ -39,6 +39,11 @@
 #include "asignify_internal.h"
 #include "blake2.h"
 #include "tweetnacl.h"
+#include "kvec.h"
+
+#define SSH_PRIVKEY_START "-----BEGIN OPENSSH PRIVATE KEY-----"
+#define SSH_PRIVKEY_END "-----END OPENSSH PRIVATE KEY-----"
+#define SSH_PRIVKEY_MAGIC "openssh-key-v1"
 
 enum asignify_privkey_field {
 	PRIVKEY_FIELD_STRING,
@@ -543,4 +548,185 @@ asignify_ssh_read_string(const unsigned char *buf, unsigned int *str_len,
 	}
 
 	return (p);
+}
+
+#define SAFE_MEMCMP(in, pat, inlen) ((inlen) >= sizeof(pat) && memcmp(in, pat, sizeof(pat)) == 0)
+#define SAFE_STRCMP(in, pat, inlen) ((inlen) >= sizeof(pat) - 1 && memcmp(in, pat, sizeof(pat) - 1) == 0)
+
+struct asignify_private_data*
+asignify_ssh_privkey_load(FILE *f, int *error)
+{
+	char *line = NULL;
+	size_t buflen = 0;
+	int r;
+	kvec_t(char) data;
+	unsigned char *decoded,
+		pk[crypto_sign_PUBLICKEYBYTES], sk[crypto_sign_SECRETKEYBYTES];
+	const unsigned char *tok, *p;
+	bool key_read = false;
+	unsigned int tlen;
+	struct asignify_private_data* res = NULL;
+
+	if (f == NULL) {
+		return (NULL);
+	}
+
+	if ((r = getline(&line, &buflen, f)) <= 0) {
+		return (NULL);
+	}
+
+	if (r < sizeof(SSH_PRIVKEY_START) - 1 || memcmp(line, SSH_PRIVKEY_START,
+			sizeof(SSH_PRIVKEY_START) - 1) != 0) {
+		if (error) {
+			*error = ASIGNIFY_ERROR_FORMAT;
+		}
+
+		return (NULL);
+	}
+
+	kv_init(data);
+
+	while ((r = getline(&line, &buflen, f)) > 0) {
+		if (r >= sizeof(SSH_PRIVKEY_END) - 1 && memcmp(line, SSH_PRIVKEY_END,
+				sizeof(SSH_PRIVKEY_END) - 1) == 0) {
+			key_read = true;
+			break;
+		}
+
+		kv_push_a(char, data, line, r);
+	}
+
+	free(line);
+
+	if (!key_read) {
+		kv_destroy(data);
+
+		if (error) {
+			*error = ASIGNIFY_ERROR_FORMAT;
+		}
+
+		return (NULL);
+	}
+
+	decoded = xmalloc(kv_size(data));
+	r = b64_pton(data.a, decoded, kv_size(data));
+	explicit_memzero(data.a, kv_size(data));
+
+	if (r == -1) {
+		if (error) {
+			*error = ASIGNIFY_ERROR_FORMAT;
+		}
+
+		goto cleanup;
+	}
+
+	p = decoded;
+	/* openssh magic is a null terminated string */
+	if (!SAFE_MEMCMP(p, SSH_PRIVKEY_MAGIC, r)) {
+		if (error) {
+			*error = ASIGNIFY_ERROR_FORMAT;
+		}
+
+		goto cleanup;
+	}
+
+	p += sizeof(SSH_PRIVKEY_MAGIC);
+	r -= sizeof(SSH_PRIVKEY_MAGIC);
+
+	/* KDF and encryption alg should be "none" */
+	tok = asignify_ssh_read_string(p, &tlen, r, &p);
+	if (tok == NULL || !SAFE_STRCMP(tok, "none", tlen)) {
+		if (error) {
+			*error = ASIGNIFY_ERROR_FORMAT;
+		}
+
+		goto cleanup;
+	}
+	r -= tlen + 4;
+	tok = asignify_ssh_read_string(p, &tlen, r, &p);
+	if (tok == NULL || !SAFE_STRCMP(tok, "none", tlen)) {
+		if (error) {
+			*error = ASIGNIFY_ERROR_FORMAT;
+		}
+
+		goto cleanup;
+	}
+	r -= tlen + 4;
+
+	/* Now we have 3 uint32_t that we do not care about */
+	if (r <= sizeof(uint32_t) * 3) {
+		if (error) {
+			*error = ASIGNIFY_ERROR_FORMAT;
+		}
+
+		goto cleanup;
+	}
+
+	p += sizeof(uint32_t) * 3;
+	r -= sizeof(uint32_t) * 3;
+
+	/*
+	 * Read pubkey and privkey parts here and reconstruct the full
+	 * ed25519 privkey
+	 */
+	tok = asignify_ssh_read_string(p, &tlen, r, &p);
+	if (tok == NULL || !SAFE_STRCMP(tok, "ssh-ed25519", tlen)) {
+		if (error) {
+			*error = ASIGNIFY_ERROR_FORMAT;
+		}
+
+		goto cleanup;
+	}
+	r -= tlen + 4;
+
+	tok = asignify_ssh_read_string(p, &tlen, r, &p);
+	if (tok == NULL || tlen != sizeof(pk)) {
+		if (error) {
+			*error = ASIGNIFY_ERROR_FORMAT;
+		}
+
+		goto cleanup;
+	}
+	r -= tlen + 4;
+	memcpy(pk, tok, tlen);
+
+	tok = asignify_ssh_read_string(p, &tlen, r, &p);
+	if (tok == NULL || !SAFE_STRCMP(tok, "ssh-ed25519", tlen)) {
+		if (error) {
+			*error = ASIGNIFY_ERROR_FORMAT;
+		}
+
+		goto cleanup;
+	}
+	r -= tlen + 4;
+
+	tok = asignify_ssh_read_string(p, &tlen, r, &p);
+	if (tok == NULL || tlen != sizeof(sk) / 2) {
+		if (error) {
+			*error = ASIGNIFY_ERROR_FORMAT;
+		}
+
+		goto cleanup;
+	}
+	/* Full secret key consist of sk || pk */
+	memcpy(sk, tok, tlen);
+	memcpy(sk + crypto_sign_PUBLICKEYBYTES, pk, crypto_sign_PUBLICKEYBYTES);
+
+	res = xmalloc0(sizeof(*res));
+	res->id_len = 0;
+	res->version = 1;
+	res->data_len = crypto_sign_SECRETKEYBYTES;
+	res->data = xmalloc(res->data_len);
+	memcpy(res->data, sk, res->data_len);
+
+	if (error) {
+		*error = ASIGNIFY_ERROR_OK;
+	}
+
+cleanup:
+	explicit_memzero(decoded, r);
+	explicit_memzero(sk, sizeof(sk));
+	free(decoded);
+
+	return (res);
 }
