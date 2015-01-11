@@ -42,15 +42,54 @@
 #include "tweetnacl.h"
 
 static bool
-asignify_generate_v1(FILE *privf, FILE *pubf, unsigned int rounds,
+asignify_encrypt_privkey(struct asignify_private_key *privk, unsigned int rounds,
 		asignify_password_cb password_cb, void *d)
 {
 	unsigned char canary[10];
 	unsigned char xorkey[crypto_sign_SECRETKEYBYTES];
 	char password[1024];
+	int r;
+
+	privk->checksum = xmalloc(BLAKE2B_OUTBYTES);
+	privk->salt = xmalloc(SALT_LEN);
+	privk->rounds = rounds;
+	privk->pbkdf_alg = PBKDF_ALG;
+	randombytes(privk->salt, SALT_LEN);
+	blake2b(privk->checksum, privk->encrypted_blob, NULL, BLAKE2B_OUTBYTES,
+			crypto_sign_SECRETKEYBYTES, 0);
+
+	randombytes(canary, sizeof(canary));
+	memcpy(password + sizeof(password) - sizeof(canary), canary,
+			sizeof(canary));
+	r = password_cb(password, sizeof(password) - sizeof(canary), d);
+	if (r <= 0 || r > sizeof(password) - sizeof(canary) ||
+			memcmp(password + sizeof(password) - sizeof(canary), canary, sizeof(canary)) != 0) {
+		return (false);
+	}
+
+	if (pkcs5_pbkdf2(password, r, privk->salt, SALT_LEN, xorkey, sizeof(xorkey),
+			privk->rounds) == -1) {
+		return (false);
+	}
+
+	explicit_memzero(password, sizeof(password));
+
+	for (r = 0; r < sizeof(xorkey); r ++) {
+		privk->encrypted_blob[r] ^= xorkey[r];
+	}
+
+	explicit_memzero(xorkey, sizeof(xorkey));
+
+	return (true);
+}
+
+static bool
+asignify_generate_v1(FILE *privf, FILE *pubf, unsigned int rounds,
+		asignify_password_cb password_cb, void *d)
+{
+
 	struct asignify_private_key *privk;
 	struct asignify_public_data *pubk;
-	int r;
 	bool ret = true;
 
 	if (privf == NULL || pubf == NULL ||
@@ -75,43 +114,16 @@ asignify_generate_v1(FILE *privf, FILE *pubf, unsigned int rounds,
 	crypto_sign_keypair(pubk->data, privk->encrypted_blob);
 
 	if (password_cb != NULL) {
-		privk->checksum = xmalloc(BLAKE2B_OUTBYTES);
-		privk->salt = xmalloc(SALT_LEN);
-		privk->rounds = rounds;
-		privk->pbkdf_alg = PBKDF_ALG;
-		randombytes(privk->salt, SALT_LEN);
-		blake2b(privk->checksum, privk->encrypted_blob, NULL, BLAKE2B_OUTBYTES,
-				crypto_sign_SECRETKEYBYTES, 0);
-
-		randombytes(canary, sizeof(canary));
-		memcpy(password + sizeof(password) - sizeof(canary), canary,
-				sizeof(canary));
-		r = password_cb(password, sizeof(password) - sizeof(canary), d);
-		if (r <= 0 || r > sizeof(password) - sizeof(canary) ||
-				memcmp(password + sizeof(password) - sizeof(canary), canary, sizeof(canary)) != 0) {
-			ret = false;
+		if (!asignify_encrypt_privkey(privk, rounds, password_cb, d)) {
 			goto cleanup;
 		}
-
-		if (pkcs5_pbkdf2(password, r, privk->salt, SALT_LEN, xorkey, sizeof(xorkey),
-				privk->rounds) == -1) {
-			ret = false;
-			goto cleanup;
-		}
-
-		explicit_memzero(password, sizeof(password));
-
-		for (r = 0; r < sizeof(xorkey); r ++) {
-			privk->encrypted_blob[r] ^= xorkey[r];
-		}
-
-		explicit_memzero(xorkey, sizeof(xorkey));
 	}
 
 	ret = asignify_pubkey_write(pubk, pubf);
 	if (ret) {
 		ret = asignify_privkey_write(privk, privf);
 	}
+
 cleanup:
 	asignify_public_data_free(pubk);
 	explicit_memzero(privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
