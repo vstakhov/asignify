@@ -160,7 +160,10 @@ asignify_privkey_write(struct asignify_private_key *privk, FILE *f)
 	if (privk->version == 1) {
 		fprintf(f, PRIVKEY_MAGIC "\n" "version: %u\n", privk->version);
 		HEX_OUT_PRIVK(privk, encrypted_blob, "data", crypto_sign_SECRETKEYBYTES, f);
-		HEX_OUT_PRIVK(privk, id, "id", KEY_ID_LEN, f);
+
+		if (privk->id) {
+			HEX_OUT_PRIVK(privk, id, "id", KEY_ID_LEN, f);
+		}
 
 		/* Encrypted privkey */
 		if (privk->pbkdf_alg != NULL) {
@@ -194,4 +197,52 @@ asignify_generate(const char *privkf, const char *pubkf, unsigned int version,
 	}
 
 	return (false);
+}
+
+bool
+asignify_privkey_from_ssh(const char *sshkf, const char *privkf,
+		unsigned int version, unsigned int rounds,
+		asignify_password_cb password_cb, void *d)
+{
+	FILE *privf, *sshf;
+	struct asignify_private_data *privd = NULL;
+	struct asignify_private_key privk;
+	bool ret = false;
+
+	if (version == 1) {
+		sshf = xfopen(sshkf, "r");
+
+		if (!sshf) {
+			return (false);
+		}
+
+		privd = asignify_ssh_privkey_load(sshf, NULL);
+
+		if (privd == NULL) {
+			return (false);
+		}
+
+		privf = xfopen(privkf, "w");
+		if (privf == NULL) {
+			asignify_private_data_free(privd);
+			return (false);
+		}
+
+		privk.encrypted_blob = privd->data;
+		privk.version = version;
+		privk.id = NULL;
+
+		if (password_cb != NULL) {
+			if (!asignify_encrypt_privkey(&privk, rounds, password_cb, d)) {
+				asignify_private_data_free(privd);
+				return (false);
+			}
+		}
+
+		ret = asignify_privkey_write(&privk, privf);
+	}
+
+	asignify_private_data_free(privd);
+
+	return (ret);
 }

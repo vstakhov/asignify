@@ -197,6 +197,20 @@ unsigned char* asignify_digest_fd(enum asignify_digest_type type, int fd);
 enum asignify_digest_type asignify_digest_from_str(const char *data,
 	ssize_t dlen);
 
+/**
+ * Convert unencrypted SSH ed25519 private key to the native format
+ * @param sshkf filename for ssh key
+ * @param privkf filename for native key
+ * @param version veriosn to use (1 is the current version)
+ * @param rounds rounds to apply PBKDF
+ * @param password_cb password callback (or NULL for unencrypted native key)
+ * @param d opaque data pointer for password callback
+ * @return true if key has been generated successfully
+ */
+bool asignify_privkey_from_ssh(const char *sshkf, const char *privkf,
+		unsigned int version, unsigned int rounds,
+		asignify_password_cb password_cb, void *d);
+
 #if defined(__cplusplus)
 }
 #endif
