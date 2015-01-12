@@ -4,17 +4,17 @@ asignify - cryptographically sign, verify, encrypt or decrypt files.
 
 =head1 SYNOPSIS
 
-B<asignify> [-q] verify pubkey signature
+B<asignify> S<[B<-q>]> verify pubkey signature
 
-B<asignify> [-q] check pubkey signature file [file...]
+B<asignify> S<[B<-q>]> check pubkey signature file S<[file...]>
 
-B<asignify> [-q] sign [-n] [-d <digest>] [-s <sshkey>] secretkey signature [file1 [file2...]]
+B<asignify> S<[B<-q>]> sign S<[B<-n>]> S<[B<-d>S< I<digest>>]> S<[B<-s>S< I<sshkey>>]> secretkey signature S<[file1 S<[file2...]>]>
 
-B<asignify> [-q] generate [-n] [-r <rounds>] secretkey [publickey]
+B<asignify> S<[B<-q>]> generate S<[B<-n>]> S<[B<-r>S< I<rounds>>]> secretkey S<[publickey]>
 
-B<asignify> [-q] encrypt [-d] secretkey publickey infile outfile
+B<asignify> S<[B<-q>]> encrypt S<[B<-d>]> secretkey publickey infile outfile
 
-B<asignify> [-q] decrypt secretkey publickey infile outfile
+B<asignify> S<[B<-q>]> decrypt secretkey publickey infile outfile
 
 =head1 DESCRIPTION
 
@@ -29,13 +29,13 @@ The mode of operation is selected with the following options:
 
 Quiet mode. Suppress informational output.
 
-=item B<verify>	
+=item B<verify>
 
 Verify signarure for a digests file (but do not verify digests themselves):
 
 =over 12
 
-=item B<pubkey> 
+=item B<pubkey>
 
 Name of the file with a public key.
 
