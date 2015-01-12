@@ -228,6 +228,7 @@ asignify_privkey_from_ssh(const char *sshkf, const char *privkf,
 			return (false);
 		}
 
+		memset(&privk, 0, sizeof(privk));
 		privk.encrypted_blob = privd->data;
 		privk.version = version;
 		privk.id = NULL;
