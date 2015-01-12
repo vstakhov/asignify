@@ -227,6 +227,8 @@ extern int crypto_sign_ed25519_tweet_keypair(unsigned char *,unsigned char *);
 #define crypto_sign_ed25519_SECRETKEYBYTES crypto_sign_ed25519_tweet_SECRETKEYBYTES
 #define crypto_sign_ed25519_VERSION crypto_sign_ed25519_tweet_VERSION
 #define crypto_sign_ed25519_IMPLEMENTATION "crypto_sign/ed25519/tweet"
+extern int crypto_sign_ed25519_pk_to_curve25519(unsigned char *, const unsigned char *);
+extern int crypto_sign_ed25519_sk_to_curve25519(unsigned char *, const unsigned char *);
 #define crypto_stream_PRIMITIVE "xsalsa20"
 #define crypto_stream crypto_stream_xsalsa20
 #define crypto_stream_xor crypto_stream_xsalsa20_xor

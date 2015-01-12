@@ -9,6 +9,7 @@ typedef unsigned long long u64;
 typedef long long i64;
 typedef i64 gf[16];
 extern void randombytes(u8 *,u64);
+extern void explicit_memzero(void *, u64);
 
 static const u8
   _0[16],
@@ -840,4 +841,44 @@ crypto_sign_verify_detached(const u8 *sig, const u8 *h, const u8 *pk)
     }
 
     return 0;
+}
+
+int
+crypto_sign_ed25519_sk_to_curve25519(unsigned char *curve25519_sk,
+	const unsigned char *ed25519_sk)
+{
+  unsigned char h[crypto_hash_sha512_BYTES];
+  int i;
+
+  crypto_hash(h, ed25519_sk,
+	  crypto_sign_ed25519_SECRETKEYBYTES - crypto_sign_ed25519_PUBLICKEYBYTES);
+  h[0] &= 248;
+  h[31] &= 127;
+  h[31] |= 64;
+
+  FOR(i, crypto_scalarmult_curve25519_BYTES) curve25519_sk[i] = h[i];
+  explicit_memzero(h, sizeof h);
+
+  return 0;
+}
+
+int
+crypto_sign_ed25519_pk_to_curve25519(unsigned char *curve25519_pk,
+	const unsigned char *ed25519_pk)
+{
+  gf p[4];
+  gf x, one_minus_y, t;
+  int i;
+
+  if (unpackneg(p,ed25519_pk)) return -1;
+
+  FOR(i, 16) one_minus_y[i] = gf1[i];
+  Z(t, one_minus_y, p[1]);
+  inv25519(one_minus_y, t);
+  FOR(i, 16) x[i] = gf1[i];
+  A(t, x, p[1]);
+  M(x, t, one_minus_y);
+  pack25519(curve25519_pk, x);
+
+  return 0;
 }
