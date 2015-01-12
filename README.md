@@ -18,7 +18,15 @@ Asignify can verify OpenBSD signatures (but it cannot sign messages in OpenBSD f
 - Ability to encrypt files with the same keys using curve25519 based [cryptobox](http://nacl.cr.yp.to/box.html).
 - Protecting secret keys by passwords using PBKDF2-BLAKE2 routine
 - `asignify` can convert ssh ed25519 private keys to the native format and verify signatures using just ssh ed25519 public keys (without intermediate conversions)
-- `asignify` is designed to be fast and portable, it is faster than many state-of-art tools, for example, gpg
+- `asignify` is designed to be fast and portable, it is faster than many state-of-art tools, for example, gpg:
+
+```
+Intel(R) Core(TM)2 Quad CPU    Q6600  @ 2.40GHz (-O3)
+
+asignify encrypt sec1 sec2.pub test   7,66s user 2,48s system 88% cpu 11,482 total
+gpg --encrypt --sign -r bob@example.com test   20,61s user 0,51s system 99% cpu 21,197 total
+```
+
 - `asignify` provides high level API for application developers for signing, verifying, encrypting and
 keys generation
 - All keys, signatures and encrypted files contain version information allowing to change
@@ -289,22 +297,24 @@ is currently unsupported, however such a support is planned in the future.
 This code is licensed under simplified BSD license and includes portions of 3-rd
 party code designed and written by various authors:
 
-blake2                                 Jean-Philippe Aumasson
-                                       Christian Winnerlein
-                                       Samuel Neves
-                                       Zooko Wilcox-O'Hearn
-
-chacha20                               Daniel J. Bernstein
-salsa20
-
-curve25519                             Daniel J. Bernstein
-
-curve25519xsalsa20poly1305             Daniel J. Bernstein
-
-ed25519                                Daniel J. Bernstein
-                                       Bo-Yin Yang
-                                       Niels Duif
-                                       Peter Schwabe
-                                       Tanja Lange
-
-chacha20 implementation                Andrew "floodyberry" Moon.
+- blake2: 
+	+ Jean-Philippe Aumasson
+	+ Christian Winnerlein
+	+ Samuel Neves
+	+ Zooko Wilcox-O'Hearn
+- chacha20                               
+	+ Daniel J. Bernstein
+- salsa20
+	+ Daniel J. Bernstein
+- curve25519
+	+ Daniel J. Bernstein
+- curve25519xsalsa20poly1305
+	+ Daniel J. Bernstein
+- ed25519
+	+ Daniel J. Bernstein
+	+ Bo-Yin Yang
+	+ Niels Duif
+	+ Peter Schwabe
+	+ Tanja Lange
+- chacha20 implementation
+	+ Andrew "floodyberry" Moon.

@@ -123,6 +123,34 @@ List of file(s) to calculate digests for.
 
 =back
 
+=item B<encrypt>
+
+Encrypt a file using local private key and remote public key (and vice-versa for decryption):
+
+=over 12
+
+=item B<-d, --decrypt>
+
+Decrypt using remote privkey and local pubkey (that is same as invoking this command as B<decrypt>)
+
+=item B<secretkey>
+
+Name of the file with a secret key: local for encryption and remote for decryption.
+
+=item B<publickey>
+
+Name of the file with a public key: remote for encryption and local for decryption.
+
+=item B<in>
+
+The name of input file.
+
+=item B<out>
+
+The name of output file.
+
+=back
+
 
 =back
 

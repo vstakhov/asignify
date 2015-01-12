@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "asignify 1"
-.TH asignify 1 "2015-01-12" "" "General Commands Manual"
+.TH asignify 1 "2015-01-12" "perl v5.18.2" "User Commands"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -142,17 +142,17 @@
 asignify \- cryptographically sign, verify, encrypt or decrypt files.
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-\&\fBasignify\fR [\-q] verify pubkey signature
+\&\fBasignify\fR [\fB\-q\fR] verify pubkey signature
 .PP
-\&\fBasignify\fR [\-q] check pubkey signature file [file...]
+\&\fBasignify\fR [\fB\-q\fR] check pubkey signature file [file...]
 .PP
-\&\fBasignify\fR [\-q] sign [\-n] [\-d <digest>] [\-s <sshkey>] secretkey signature [file1 [file2...]]
+\&\fBasignify\fR [\fB\-q\fR] sign [\fB\-n\fR] [\fB\-d\fR\ \fIdigest\fR] [\fB\-s\fR\ \fIsshkey\fR] secretkey signature [file1\ [file2...]]
 .PP
-\&\fBasignify\fR [\-q] generate [\-n] [\-r <rounds>] secretkey [publickey]
+\&\fBasignify\fR [\fB\-q\fR] generate [\fB\-n\fR] [\fB\-r\fR\ \fIrounds\fR] secretkey [publickey]
 .PP
-\&\fBasignify\fR [\-q] encrypt [\-d] secretkey publickey infile outfile
+\&\fBasignify\fR [\fB\-q\fR] encrypt [\fB\-d\fR] secretkey publickey infile outfile
 .PP
-\&\fBasignify\fR [\-q] decrypt secretkey publickey infile outfile
+\&\fBasignify\fR [\fB\-q\fR] decrypt secretkey publickey infile outfile
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 The asignify utility creates and verifies cryptographic signatures. A signature is stamped on a digests file
@@ -237,6 +237,28 @@ List of file(s) to calculate digests for.
 .RE
 .RS 8
 .RE
+.IP "\fBencrypt\fR" 8
+.IX Item "encrypt"
+Encrypt a file using local private key and remote public key (and vice-versa for decryption):
+.RS 8
+.IP "\fB\-d, \-\-decrypt\fR" 12
+.IX Item "-d, --decrypt"
+Decrypt using remote privkey and local pubkey (that is same as invoking this command as \fBdecrypt\fR)
+.IP "\fBsecretkey\fR" 12
+.IX Item "secretkey"
+Name of the file with a secret key: local for encryption and remote for decryption.
+.IP "\fBpublickey\fR" 12
+.IX Item "publickey"
+Name of the file with a public key: remote for encryption and local for decryption.
+.IP "\fBin\fR" 12
+.IX Item "in"
+The name of input file.
+.IP "\fBout\fR" 12
+.IX Item "out"
+The name of output file.
+.RE
+.RS 8
+.RE
 .SH "EXIT STATUS"
 .IX Header "EXIT STATUS"
 The asignify return zero exit code on success, and non-zero if an error occurs.
@@ -252,13 +274,25 @@ It may  fail because of one of the following reasons:
 .SH "EXAMPLES"
 .IX Header "EXAMPLES"
 \&\fICreate a new key pair:\fR
- $ asignify generate keys/key.secret keys/key.public
+.PP
+.Vb 1
+\& $ asignify generate keys/key.secret keys/key.public
+.Ve
 .PP
 \&\fISign a file, specifying a signature name:\fR
- $ asignify sign \-d blake2 keys/key.secret motd.sig /etc/motd
+.PP
+.Vb 1
+\& $ asignify sign \-d blake2 keys/key.secret motd.sig /etc/motd
+.Ve
 .PP
 \&\fIVerify a signature:\fR
- $ asignify verify keys/key.public motd.sig
+.PP
+.Vb 1
+\& $ asignify verify keys/key.public motd.sig
+.Ve
 .PP
 \&\fIVerify a signed digest list:\fR
- $ asignify check keys/key.public motd.sig /etc/motd
+.PP
+.Vb 1
+\& $ asignify check keys/key.public motd.sig /etc/motd
+.Ve
