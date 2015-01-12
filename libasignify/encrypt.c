@@ -269,3 +269,24 @@ cleanup:
 	explicit_memzero(&enc_st, sizeof(enc_st));
 	return (ret);
 }
+
+const char*
+asignify_encrypt_get_error(asignify_encrypt_t *ctx)
+{
+	if (ctx == NULL) {
+		return (xerr_string(ASIGNIFY_ERROR_MISUSE));
+	}
+
+	return (ctx->error);
+}
+
+void asignify_encrypt_free(asignify_encrypt_t *ctx)
+{
+
+	if (ctx) {
+		asignify_private_data_free(ctx->privk);
+		asignify_public_data_free(ctx->pubk);
+		free(ctx);
+	}
+}
+
