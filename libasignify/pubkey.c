@@ -128,7 +128,7 @@ asignify_pubkey_try_ssh(const char *buf, size_t buflen,
 	if (tlen == crypto_sign_ed25519_PUBLICKEYBYTES) {
 		res = xmalloc(sizeof(*res));
 		res->version = 1;
-		res->data_len = sizeof(crypto_sign_ed25519_PUBLICKEYBYTES);
+		res->data_len = crypto_sign_ed25519_PUBLICKEYBYTES;
 		res->id_len = 0;
 		asignify_alloc_public_data_fields(res);
 		memcpy(res->data, tok, res->data_len);

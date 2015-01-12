@@ -699,10 +699,13 @@ asignify_ssh_privkey_load(FILE *f, int *error)
 	 * <uint32>
 	 * <uint32>
 	 * <length_string> = "ssh-ed25519"
+	 * <length_blob> = ssh *public* key part
 	 * <length_blob> = ssh private key part
 	 *
 	 * We skip 12 bytes as we do not care about their sanity as it is meaningful
 	 * merely for encrypted privkeys
+	 *
+	 * We also skip the whole public key as we have read it already
 	 */
 	if (r <= sizeof(uint32_t) * 3) {
 		if (error) {
@@ -725,17 +728,28 @@ asignify_ssh_privkey_load(FILE *f, int *error)
 	}
 	r -= tlen + 4;
 
+	/* Pubkey part, thank you, openssh developers */
 	tok = asignify_ssh_read_string(p, &tlen, r, &p);
-	if (tok == NULL || tlen != sizeof(sk) / 2) {
+	if (tok == NULL || tlen != sizeof(pk)) {
 		if (error) {
 			*error = ASIGNIFY_ERROR_FORMAT;
 		}
 
 		goto cleanup;
 	}
-	/* Full secret key consist of sk || pk */
+	r -= tlen + 4;
+
+	tok = asignify_ssh_read_string(p, &tlen, r, &p);
+	if (tok == NULL || tlen != sizeof(sk)) {
+		if (error) {
+			*error = ASIGNIFY_ERROR_FORMAT;
+		}
+
+		goto cleanup;
+	}
+	r -= tlen + 4;
+
 	memcpy(sk, tok, tlen);
-	memcpy(sk + crypto_sign_PUBLICKEYBYTES, pk, crypto_sign_PUBLICKEYBYTES);
 
 	res = xmalloc0(sizeof(*res));
 	res->id_len = 0;
