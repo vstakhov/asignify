@@ -84,7 +84,7 @@ struct asignify_file_digest {
 struct asignify_file {
 	char *fname;
 	struct asignify_file_digest *digests;
-	uint64_t size;
+	size_t size;
 };
 
 void randombytes(unsigned char *buf, uint64_t len);

@@ -9,7 +9,7 @@ asignify_SOURCES= asignify.c \
 				generate.c \
 				encrypt.c
 
-asignify_LDFLAGS = $(top_srcdir)/libasignify/libasignify.la \
+asignify_LDFLAGS = $(top_builddir)/libasignify/libasignify.la \
 			@OPENSSL_LDFLAGS@ \
 			@OPENSSL_LIBS@ \
 			@OS_LIBS@
