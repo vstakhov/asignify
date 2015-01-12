@@ -93,15 +93,8 @@ AC_CHECK_LIB(c, cap_sandboxed, [
    AC_DEFINE(HAVE_CAPSICUM, 1, [Define 1 if you have 'capsicum'.])
 ])
 
-AC_CACHE_CHECK(for arc4random_uniform,
-               ac_cv_func_arc4random_uniform,
-               [AC_TRY_COMPILE([#include <stdlib.h>],
-                               [arc4random_uniform(255);],
-                               [ac_cv_func_arc4random_uniform=yes],
-                               [ac_cv_func_arc4random_uniform=no])])
-if test "$ac_cv_func_arc4random_uniform" = yes ; then
-	AC_DEFINE(HAVE_ARC4RANDOM, 1, [Define 1 if you have 'arc4random_uniform' function.])
-fi
+AC_SEARCH_LIBS([arc4random_buf], [bsd])
+AC_CHECK_FUNCS([arc4random_buf])
 
 AC_ARG_ENABLE([openssl],
     AS_HELP_STRING([--enable-openssl], [Use openssl for faster hashes computation]))

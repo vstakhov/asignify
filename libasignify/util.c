@@ -96,7 +96,7 @@ void explicit_memzero(void * const pnt, const size_t len)
 void
 randombytes(unsigned char *buf, uint64_t len)
 {
-#ifdef HAVE_ARC4RANDOM
+#ifdef HAVE_ARC4RANDOM_BUF
 	arc4random_buf(buf, len);
 #elif defined(HAVE_OPENSSL)
 	if (RAND_bytes(buf, len) != 1) {
