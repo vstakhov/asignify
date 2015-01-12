@@ -690,6 +690,28 @@ asignify_ssh_privkey_load(FILE *f, int *error)
 	r -= tlen + 4;
 	memcpy(pk, tok, tlen);
 
+	/*
+	 * After public key we have an ssh blob with the following structure:
+	 * <total_length> 4 bytes
+	 * <uint32>
+	 * <uint32>
+	 * <length_string> = "ssh-ed25519"
+	 * <length_blob> = ssh private key part
+	 *
+	 * We skip 12 bytes as we do not care about their sanity as it is meaningful
+	 * merely for encrypted privkeys
+	 */
+	if (r <= sizeof(uint32_t) * 3) {
+		if (error) {
+			*error = ASIGNIFY_ERROR_FORMAT;
+		}
+
+		goto cleanup;
+	}
+
+	p += sizeof(uint32_t) * 3;
+	r -= sizeof(uint32_t) * 3;
+
 	tok = asignify_ssh_read_string(p, &tlen, r, &p);
 	if (tok == NULL || !SAFE_STRCMP(tok, "ssh-ed25519", tlen)) {
 		if (error) {
