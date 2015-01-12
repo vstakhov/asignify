@@ -111,8 +111,10 @@ asignify_public_data_free(struct asignify_public_data *d)
 	if (d) {
 		free(d->data);
 		free(d->id);
+		free(d->aux);
 		d->data = NULL;
 		d->id = NULL;
+		d->aux = 0;
 		free(d);
 	}
 }
@@ -124,6 +126,9 @@ asignify_alloc_public_data_fields(struct asignify_public_data *pk)
 
 	if (pk->id_len > 0) {
 		pk->id = xmalloc(pk->id_len);
+	}
+	if (pk->aux_len > 0) {
+		pk->aux = xmalloc(pk->aux_len);
 	}
 }
 
@@ -155,7 +160,7 @@ asignify_public_data_load(const char *buf, size_t buflen, const char *magic,
 		return (NULL);
 	}
 
-	res = xmalloc(sizeof(*res));
+	res = xmalloc0(sizeof(*res));
 	res->version = 1;
 	res->data_len = data_len;
 	res->id_len = id_len;
@@ -172,10 +177,21 @@ asignify_public_data_load(const char *buf, size_t buflen, const char *magic,
 	p ++;
 
 	/* Read data */
-	blen = b64_pton_stop(p, res->data, res->data_len, "");
+	blen = b64_pton_stop(p, res->data, res->data_len, ":");
 	if (blen != res->data_len) {
 		asignify_public_data_free(res);
 		return (NULL);
+	}
+
+	if ((p = strchr(p, ':')) != NULL) {
+		/* We have some aux data for this line */
+		p ++;
+		res->aux_len = strcspn(p, "\n\r");
+		if (res->aux_len > 0) {
+			res->aux = xmalloc(res->aux_len + 1);
+			memcpy(res->aux, p, res->aux_len);
+			res->aux[res->aux_len] = '\0';
+		}
 	}
 
 	return (res);

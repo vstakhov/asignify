@@ -52,6 +52,8 @@ struct asignify_public_data {
 	size_t data_len;
 	unsigned char *id;
 	size_t id_len;
+	unsigned char *aux;
+	size_t aux_len;
 	unsigned int version;
 };
 
