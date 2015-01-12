@@ -192,11 +192,14 @@ chacha_blocks(chacha_state_internal *state, const unsigned char *in,
 			/* store the counter back to the state */
 			U32TO8(state->s + 32, j[8]);
 			U32TO8(state->s + 36, j[9]);
-			return;
+			goto cleanup;
 		}
 		bytes -= 64;
 		out += 64;
 	}
+
+cleanup:
+	explicit_memzero(j, sizeof(j));
 }
 
 /* is the pointer aligned on a word boundary? */
