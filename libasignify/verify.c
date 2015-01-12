@@ -409,7 +409,8 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
 	}
 	else {
-		sig = asignify_signature_load(f);
+		/* XXX: we assume that all pk in chain are the same */
+		sig = asignify_signature_load(f, ctx->pk_chain->pk);
 		if (ctx->pk_chain == NULL) {
 			ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
 		}

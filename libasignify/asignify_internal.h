@@ -157,7 +157,8 @@ bool asignify_pubkey_write(struct asignify_public_data *pk, FILE *f);
 /*
  * Signature operations
  */
-struct asignify_public_data* asignify_signature_load(FILE *f);
+struct asignify_public_data* asignify_signature_load(FILE *f,
+		struct asignify_public_data *pk);
 bool asignify_signature_write(struct asignify_public_data *sig, const void *buf,
 	size_t len, FILE *f);
 

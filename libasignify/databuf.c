@@ -360,7 +360,7 @@ asignify_private_key_is_sane(struct asignify_private_key *privk)
 		if (privk->rounds >= PBKDF_MINROUNDS) {
 			if (privk->salt) {
 				if (privk->version == 1) {
-					if (privk->id != NULL && privk->encrypted_blob != NULL &&
+					if (privk->encrypted_blob != NULL &&
 									privk->checksum != NULL) {
 						return (true);
 					}
@@ -371,7 +371,7 @@ asignify_private_key_is_sane(struct asignify_private_key *privk)
 	else {
 		/* Unencrypted key */
 		if (privk->version == 1) {
-			if (privk->id != NULL && privk->encrypted_blob != NULL) {
+			if (privk->encrypted_blob != NULL) {
 				return (true);
 			}
 		}
@@ -389,9 +389,12 @@ asignify_pkey_to_private_data(struct asignify_private_key *privk,
 	priv->data_len = crypto_sign_SECRETKEYBYTES;
 	memcpy(priv->data, privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
 	explicit_memzero(privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
-	priv->id = xmalloc(KEY_ID_LEN);
-	priv->id_len = KEY_ID_LEN;
-	memcpy(priv->id, privk->id, KEY_ID_LEN);
+
+	if (privk->id != NULL) {
+		priv->id = xmalloc(KEY_ID_LEN);
+		priv->id_len = KEY_ID_LEN;
+		memcpy(priv->id, privk->id, KEY_ID_LEN);
+	}
 }
 
 struct asignify_private_data*

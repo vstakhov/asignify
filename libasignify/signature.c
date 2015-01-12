@@ -83,7 +83,7 @@ asignify_sig_try_obsd(const char *buf, size_t buflen,
 }
 
 struct asignify_public_data*
-asignify_signature_load(FILE *f)
+asignify_signature_load(FILE *f, struct asignify_public_data *pk)
 {
 	struct asignify_public_data *res = NULL;
 	char *buf = NULL;
@@ -103,7 +103,7 @@ asignify_signature_load(FILE *f)
 				res = asignify_public_data_load(buf, r,
 					SIG_MAGIC, sizeof(SIG_MAGIC) - 1,
 					SIG_VER_MAX, SIG_VER_MAX,
-					KEY_ID_LEN, SIG_LEN);
+					pk->id_len, SIG_LEN);
 				break;
 			}
 			else {
@@ -134,7 +134,10 @@ asignify_private_data_sign(struct asignify_private_data *privk,
 		res->data_len = crypto_sign_BYTES;
 
 		asignify_alloc_public_data_fields(res);
-		memcpy(res->id, privk->id, res->id_len);
+
+		if (privk->id_len > 0) {
+			memcpy(res->id, privk->id, res->id_len);
+		}
 
 		crypto_sign(buf, &outlen, buf + crypto_sign_BYTES, len - crypto_sign_BYTES,
 			privk->data);
@@ -148,7 +151,7 @@ bool
 asignify_signature_write(struct asignify_public_data *sig, const void *buf,
 	size_t len, FILE *f)
 {
-	char *b64data, *b64id;
+	char *b64data, *b64id = NULL;
 	bool ret = false;
 
 	if (sig == NULL || f == NULL || buf == NULL) {
@@ -156,12 +159,20 @@ asignify_signature_write(struct asignify_public_data *sig, const void *buf,
 	}
 
 	if (sig->version == 1) {
-		b64id = xmalloc(sig->id_len * 2);
-		b64_ntop(sig->id, sig->id_len, b64id, sig->id_len * 2);
+		if (sig->id_len > 0) {
+			b64id = xmalloc(sig->id_len * 2);
+			b64_ntop(sig->id, sig->id_len, b64id, sig->id_len * 2);
+		}
 		b64data = xmalloc(sig->data_len * 2);
 		b64_ntop(sig->data, sig->data_len, b64data, sig->data_len * 2);
-		ret = (fprintf(f, "%s1:%s:%s\n", SIG_MAGIC, b64id, b64data) > 0);
-		free(b64id);
+
+		if (b64id != NULL) {
+			ret = (fprintf(f, "%s1:%s:%s\n", SIG_MAGIC, b64id, b64data) > 0);
+			free(b64id);
+		}
+		else {
+			ret = (fprintf(f, "%s1::%s\n", SIG_MAGIC, b64data) > 0);
+		}
 		free(b64data);
 	}
 	else if (sig->version == 0) {
