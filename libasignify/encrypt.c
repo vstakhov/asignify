@@ -149,6 +149,15 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 		return (false);
 	}
 
+	/* Ensure that we are not trying to encrypt using the related keypair */
+	if (ctx->pubk->id_len == ctx->privk->id_len && ctx->privk->id_len > 0) {
+		if (memcmp(ctx->pubk->id, ctx->privk->id, ctx->privk->id_len) == 0) {
+			ctx->error = xerr_string(ASIGNIFY_ERROR_WRONG_KEYPAIR);
+			return (false);
+		}
+
+	}
+
 	in = xfopen(inf, "r");
 
 	if (in == NULL) {
