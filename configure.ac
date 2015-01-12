@@ -122,6 +122,7 @@ AC_PROG_LIBTOOL
 AC_CONFIG_FILES(Makefile
                 src/Makefile
                 libasignify/Makefile
-                include/Makefile)
+                include/Makefile
+                docs/Makefile)
 AC_CONFIG_HEADERS(config.h)
 AC_OUTPUT

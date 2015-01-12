@@ -6,6 +6,7 @@ noinst_HEADERS=	khash.h \
 	blake2.h \
 	blake2-impl.h \
 	sha2.h \
+	chacha.h \
 	asignify_internal.h 
 
 # Sources for libasignify

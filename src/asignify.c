@@ -57,6 +57,13 @@ usage(const char *error)
 	exit(EXIT_FAILURE);
 }
 
+static void
+version(void)
+{
+	printf("Asignify %s\n", VERSION);
+	exit(EXIT_SUCCESS);
+}
+
 static
 void help(bool failed, int argc, char **argv)
 {
@@ -136,8 +143,10 @@ main(int argc, char **argv)
 		case 'q':
 			quiet = 1;
 			break;
-		case 'h':
 		case 'v':
+			version();
+			break;
+		case 'h':
 		default:
 			usage(NULL);
 			break;

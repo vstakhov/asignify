@@ -1,3 +1,3 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS=libasignify include src
+SUBDIRS=libasignify include src docs
