@@ -62,6 +62,7 @@ enum asignify_digest_type {
  * @return new verify context or NULL
  */
 asignify_verify_t* asignify_verify_init(void);
+
 /**
  * Load public key from a file
  * @param ctx verify context
@@ -212,6 +213,44 @@ enum asignify_digest_type asignify_digest_from_str(const char *data,
 bool asignify_privkey_from_ssh(const char *sshkf, const char *privkf,
 		unsigned int version, unsigned int rounds,
 		asignify_password_cb password_cb, void *d);
+
+/**
+ * Initialize encrypt context
+ * @return new encrypt context or NULL
+ */
+asignify_encrypt_t* asignify_encrypt_init(void);
+
+/**
+ * Load public key from a file
+ * @param ctx encrypt context
+ * @param pubf file name or '-' to read from stdin
+ * @return true if a key has been successfully loaded
+ */
+bool asignify_encrypt_load_pubkey(asignify_encrypt_t *ctx, const char *pubf);
+
+/**
+ * Load private key from a file
+ * @param ctx encrypt context
+ * @param privf file name or '-' to read from stdin
+ * @param password_cb function that is called to get password from a user
+ * @param d opaque data pointer for password callback
+ * @return true if a key has been successfully loaded
+ */
+bool asignify_encrypt_load_privkey(asignify_encrypt_t *ctx, const char *privf,
+	asignify_password_cb password_cb, void *d);
+
+/**
+ * Returns last error for encrypt context
+ * @param ctx encrypt context
+ * @return constant string corresponding to the last error occurred during signing
+ */
+const char* asignify_encrypt_get_error(asignify_encrypt_t *ctx);
+
+/**
+ * Free encrypt context
+ * @param ctx encrypt context
+ */
+void asignify_encrypt_free(asignify_encrypt_t *ctx);
 
 #if defined(__cplusplus)
 }

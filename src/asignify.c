@@ -78,6 +78,10 @@ void help(bool failed, int argc, char **argv)
 		else if (strcasecmp(argv[0], "generate") == 0) {
 			ret = cli_generate_help(true);
 		}
+		else if (strcasecmp(argv[0], "encrypt") == 0 ||
+					strcasecmp(argv[0], "decrypt") == 0) {
+			ret = cli_encrypt_help(true);
+		}
 		else {
 			usage("unknown command");
 		}
@@ -166,6 +170,10 @@ main(int argc, char **argv)
 	}
 	else if (strcasecmp(argv[0], "generate") == 0) {
 		ret = cli_generate(argc, argv);
+	}
+	else if (strcasecmp(argv[0], "encrypt") == 0 ||
+					strcasecmp(argv[0], "decrypt") == 0) {
+		ret = cli_encrypt(argc, argv);
 	}
 	else if (strcasecmp(argv[0], "help") == 0) {
 		help(false, argc - 1, argv + 1);

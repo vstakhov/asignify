@@ -41,4 +41,7 @@ int cli_sign(int argc, char **argv);
 const char * cli_generate_help(bool full);
 int cli_generate(int argc, char **argv);
 
+const char * cli_encrypt_help(bool full);
+int cli_encrypt(int argc, char **argv);
+
 #endif /* CLI_H_ */
