@@ -1,4 +1,5 @@
 #include "tweetnacl.h"
+#include <stddef.h>
 
 #define FOR(i,n) for (i = 0;i < n;++i)
 #define sv static void
@@ -9,7 +10,7 @@ typedef unsigned long long u64;
 typedef long long i64;
 typedef i64 gf[16];
 extern void randombytes(u8 *,u64);
-extern void explicit_memzero(void *, u64);
+extern void explicit_memzero(void *, size_t);
 
 static const u8
   _0[16],
