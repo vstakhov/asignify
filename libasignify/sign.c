@@ -83,6 +83,7 @@ asignify_sign_load_privkey(asignify_sign_t *ctx, const char *privf,
 		else {
 			ret = true;
 		}
+		fclose(f);
 	}
 
 	return (ret);
@@ -129,6 +130,7 @@ asignify_sign_add_file(asignify_sign_t *ctx, const char *f,
 		dig->digest = calc_digest;
 		check_file.size = 0;
 		check_file.digests = dig;
+		close(fd);
 	}
 
 	kv_push(struct asignify_file, ctx->files, check_file);
@@ -201,6 +203,7 @@ asignify_sign_write_signature(asignify_sign_t *ctx, const char *sigf)
 			ret = asignify_signature_write(sig, out.a + sizeof(sig_pad),
 				kv_size(out) - sizeof(sig_pad), outf);
 		}
+		fclose(outf);
 	}
 	else {
 		ctx->error = xerr_string(ASIGNIFY_ERROR_MISUSE);

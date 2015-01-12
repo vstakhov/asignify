@@ -382,6 +382,7 @@ asignify_verify_load_pubkey(asignify_verify_t *ctx, const char *pubf)
 			chain->next = ctx->pk_chain;
 			ctx->pk_chain = chain;
 		}
+		fclose(f);
 	}
 
 	return (ret);
@@ -417,6 +418,7 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 		else {
 			data = asignify_verify_load_sig(ctx, f, &dlen);
 			if (data == NULL || dlen == 0) {
+				fclose(f);
 				return (false);
 			}
 
@@ -429,6 +431,7 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 				asignify_public_data_free(sig);
 				free(data);
 				ctx->error = xerr_string(ASIGNIFY_ERROR_VERIFY);
+				fclose(f);
 				return (false);
 			}
 
@@ -441,6 +444,7 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 			}
 			free(data);
 		}
+		fclose(f);
 	}
 
 	return (ret);
