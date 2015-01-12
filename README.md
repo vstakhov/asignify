@@ -5,13 +5,87 @@ Yet another signify tool
 ## Introduction
 
 Asignify tool is heavily inspired by [signify](http://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/signify) used in OpenBSD.
-However, the main goal of this project is to define high level API for signing files
-and validating signatures. Asignify is designed to be portable and self-contained
-with zero external dependencies. It uses [blake2b](https://blake2.net/) as the main
-hash function and ed25519 implementation from [tweetnacl](http://tweetnacl.cr.yp.to/).
+However, the main goal of this project is to define high level API for signing files,
+validating signatures and encrypting using public keys cryptography. 
+Asignify is designed to be portable and self-contained with zero external dependencies. It uses [blake2b](https://blake2.net/) as the hash function and ed25519 implementation from [tweetnacl](http://tweetnacl.cr.yp.to/).
 
-Asignify can verify OpenBSD signatures but it cannot sign messages in OpenBSD format yet.
+Asignify can verify OpenBSD signatures (but it cannot sign messages in OpenBSD format yet).
 
+## Key features
+
+- Zero dependencies (libc and C compiler are likely required though)
+- Modern cryptography primitives (ed25519, blake2 and sha512 namely)
+- Ability to encrypt files with the same keys using curve25519 based [cryptobox](http://nacl.cr.yp.to/box.html).
+- Protecting secret keys by passwords using PBKDF2-BLAKE2 routine
+- `asignify` can convert ssh ed25519 private keys to the native format and verify signatures using just ssh ed25519 public keys (without intermediate conversions)
+- `asignify` is designed to be fast and portable, it is faster than many state-of-art tools, for example, gpg
+- `asignify` provides high level API for application developers for signing, verifying, encrypting and
+keys generation
+- All keys, signatures and encrypted files contain version information allowing to change
+cryptographical primitives in the future without loosing of backward compatibility.
+
+## Usage samples
+
+Here are some (descriptive) usage examples of `asignify` utility:
+
+- Get help for a the tool:
+
+```
+$ asignify help
+$ asignify help <command>
+```
+
+- Generate keypair:
+
+```
+$ asignify generate privkey
+$ asignify generate --no-password privkey pubkey
+```
+
+- Convert ssh key:
+
+```
+$ asignify generate -s sshkey privkey
+$ asignify generate --no-password -s sshkey privkey
+```
+
+- Sign files
+
+```
+$ asignify sign secretkey digests.sig file1 file2 ...
+```
+
+- Verify signature on digests file 
+
+```
+$ asignify verify publickey digests.sig
+```
+
+- Check integrity of files correspoinding to the digests
+
+```
+$ asignify check publickey digests.sig file1 file2 ...
+```
+
+- Check integrity using SSH key
+
+```
+$ asignify check sshpubkey digests.sig file1 file2 ...
+```
+
+- Encrypt a file using own private key and peer's public key:
+
+```
+$ asignify encrypt ownprivkey peerpubkey in out
+```
+
+- Decrypt a file using peer's private key and own public key:
+
+```
+$ asignify decrypt peerprivkey ownpubkey in out
+$ asignify encrypt -d peerprivkey ownpubkey in out
+```
+ 
 ## Cryptographic basis
 
 Asignify relies on the same primitives as `signify` utility, however, for the native format
@@ -205,11 +279,32 @@ is currently unsupported, however such a support is planned in the future.
 ## Roadmap
 
 - Better OpenBSD compatibility
-- Better CLI
-- Manpages and other docs
+- ~~Better CLI~~
+- ~~Manpages and other docs~~
 - Fuzz testing
-- Encryption via ed25519 <-> curve25519 transform
+- ~~Encryption via ed25519 <-> curve25519 transform~~
 
-## Status
+## License and authors
 
-Heavily WIP (**not** for production use)
+This code is licensed under simplified BSD license and includes portions of 3-rd
+party code designed and written by various authors:
+
+blake2                                 Jean-Philippe Aumasson
+                                       Christian Winnerlein
+                                       Samuel Neves
+                                       Zooko Wilcox-O'Hearn
+
+chacha20                               Daniel J. Bernstein
+salsa20
+
+curve25519                             Daniel J. Bernstein
+
+curve25519xsalsa20poly1305             Daniel J. Bernstein
+
+ed25519                                Daniel J. Bernstein
+                                       Bo-Yin Yang
+                                       Niels Duif
+                                       Peter Schwabe
+                                       Tanja Lange
+
+chacha20 implementation                Andrew "floodyberry" Moon.
