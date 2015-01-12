@@ -139,10 +139,10 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 	bool ret = false;
 	unsigned long long outlen;
 #if BUFSIZ >= 2048
-	unsigned char buf[BUFSIZ], outbuf[BUFSIZ];
+	CHACHA_ALIGN( 64 ) unsigned char buf[BUFSIZ], outbuf[BUFSIZ];
 #else
 	/* BUFSIZ is insanely small */
-	unsigned char buf[4096], outbuf[4096];
+	CHACHA_ALIGN( 64 ) unsigned char buf[4096], outbuf[4096];
 #endif
 
 	if (ctx == NULL || ctx->privk == NULL || ctx->pubk == NULL || version != 1) {
@@ -296,10 +296,10 @@ asignify_encrypt_decrypt_file(asignify_encrypt_t *ctx,
 	unsigned char h[crypto_sign_HASHBYTES];
 	bool ret = false;
 #if BUFSIZ >= 2048
-	unsigned char buf[BUFSIZ], outbuf[BUFSIZ];
+	CHACHA_ALIGN( 64 ) unsigned char buf[BUFSIZ], outbuf[BUFSIZ];
 #else
 	/* BUFSIZ is insanely small */
-	unsigned char buf[4096], outbuf[4096];
+	CHACHA_ALIGN( 64 ) unsigned char buf[4096], outbuf[4096];
 #endif
 
 	if (ctx == NULL || ctx->privk == NULL || ctx->pubk == NULL) {
