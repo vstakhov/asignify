@@ -100,7 +100,7 @@ cli_generate(int argc, char **argv)
 	char pubkeybuf[PATH_MAX];
 	const char *seckeyfile = NULL, *pubkeyfile = NULL, *sshkeyfile = NULL;
 	static struct option long_options[] = {
-		{"no-size",   no_argument,     0,  'n' },
+		{"no-password",   no_argument,     0,  'n' },
 		{"rounds", 	required_argument, 0,  'r' },
 		{"ssh",     required_argument, 0,  's' },
 		{0,         0,                 0,  0 }
