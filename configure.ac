@@ -46,7 +46,7 @@ case $host_os in
   linux*)
         OS_CFLAGS="-D_XOPEN_SOURCE -D_GNU_SOURCE"
         OS_LDFLAGS=""
-        OS_LIBS="-ldl -lrt -lbsd"
+        OS_LIBS="-ldl -lrt"
         ;;
     *)
         OS_CFLAGS="-D_BSD_SOURCE -D_WITH_GETLINE"
@@ -73,6 +73,16 @@ AC_CHECK_DECL([O_NOFOLLOW],
      	]
 )
 
+AC_CHECK_DECL([getrandom],
+        AC_DEFINE([HAVE_GETRANDOM], [1], [Use getrandom for entropy gain]),
+        [],
+        [#include <sys/types.h>
+         #include <sys/stat.h>
+         #include <fcntl.h>
+         #include <linux/random.h>
+     	]
+)
+
 AC_CHECK_FUNCS([explicit_bzero memset_s])
 AC_MSG_CHECKING(if weak symbols are supported)
 AC_LINK_IFELSE([AC_LANG_PROGRAM([[
@@ -93,6 +103,7 @@ AC_CHECK_LIB(c, cap_sandboxed, [
    AC_DEFINE(HAVE_CAPSICUM, 1, [Define 1 if you have 'capsicum'.])
 ])
 
+AC_CHECK_LIB([bsd], [readpassphrase])
 AC_SEARCH_LIBS([arc4random_buf], [bsd])
 AC_CHECK_FUNCS([arc4random_buf])
 

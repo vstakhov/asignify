@@ -42,6 +42,9 @@
 #ifdef HAVE_BSD_STDLIB_H
 #include <bsd/stdlib.h>
 #endif
+#ifdef HAVE_GETRANDOM
+#include <linux/random.h>
+#endif
 
 #include "sha2.h"
 #include "blake2.h"
@@ -96,14 +99,31 @@ void explicit_memzero(void * const pnt, const size_t len)
 void
 randombytes(unsigned char *buf, uint64_t len)
 {
-#ifdef HAVE_ARC4RANDOM_BUF
+#ifdef HAVE_GETRANDOM
+	if (getrandom(buf, len, 0) == -1) {
+		abort();
+	}
+#elif defined(HAVE_ARC4RANDOM_BUF)
 	arc4random_buf(buf, len);
 #elif defined(HAVE_OPENSSL)
 	if (RAND_bytes(buf, len) != 1) {
 		abort();
 	}
 #else
-# error No random numbers can be generated on your system
+	int fd;
+	struct stat st;
+
+	fd = open("/dev/urandom", O_RDONLY);
+
+	if (fd == -1 || fstat(fd, &st) == -1 || !S_ISCHR(st.st_mode)) {
+		abort();
+	}
+
+	if (read(fd, buf, len) != len) {
+		abort();
+	}
+
+	close(fd);
 #endif
 }
 
