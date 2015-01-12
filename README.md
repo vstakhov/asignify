@@ -13,7 +13,7 @@ Asignify can verify OpenBSD signatures (but it cannot sign messages in OpenBSD f
 
 ## Key features
 
-- Zero dependencies (libc and C compiler are likely required though)
+- Zero dependencies (libc and C compiler are likely required though), so it could be easily used in embedded systems
 - Modern cryptography primitives (ed25519, blake2 and sha512 namely)
 - Ability to encrypt files with the same keys using curve25519 based [cryptobox](http://nacl.cr.yp.to/box.html).
 - Protecting secret keys by passwords using PBKDF2-BLAKE2 routine
