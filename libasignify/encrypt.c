@@ -43,7 +43,7 @@
 #include "tweetnacl.h"
 
 #define ENCRYPTED_MAGIC "asignify-encrypted"
-#define ENCRYPTED_SIGNATURE_MAGIC "chacha20"
+#define ENCRYPTED_SIGNATURE_MAGIC "chacha20-blake2"
 #define CHACHA_ROUNDS 20
 
 struct asignify_encrypt_ctx {
