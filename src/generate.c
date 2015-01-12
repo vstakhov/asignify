@@ -79,14 +79,15 @@ cli_generate_help(bool full)
 {
 	const char *fullmsg = ""
 		"asignify [global_opts] generate - generates a keypair\n\n"
-		"Usage: asignify generate [-n] [-r <rounds>] <secretkey> [<publickey>]\n"
+		"Usage: asignify generate [-n] [-r <rounds>] [-s <sshkey> ] <secretkey> [<publickey>]\n"
 		"\t-n           Do not encrypt secret key\n"
 		"\t-r           Specify number of PBKDF rounds for secret key\n"
+		"\t-s <sshkey>  Convert the specified ssh secret key to native secret key\n"
 		"\tsecretkey    Path to a secret key\n"
 		"\tpubkey       Path to a public key (default: <secretkey>.pub)\n";
 
 	if (!full) {
-		return ("generate [-n] [-r <rounds>] secretkey [publickey]");
+		return ("generate [-n] [-r <rounds>] [-s <sshkey>] secretkey [publickey]");
 	}
 
 	return (fullmsg);
@@ -97,20 +98,24 @@ cli_generate(int argc, char **argv)
 {
 	int rounds = PBKDF_MINROUNDS * 10, ch;
 	char pubkeybuf[PATH_MAX];
-	const char *seckeyfile, *pubkeyfile;
+	const char *seckeyfile = NULL, *pubkeyfile = NULL, *sshkeyfile = NULL;
 	static struct option long_options[] = {
 		{"no-size",   no_argument,     0,  'n' },
 		{"rounds", 	required_argument, 0,  'r' },
+		{"ssh",     required_argument, 0,  's' },
 		{0,         0,                 0,  0 }
 	};
 
-	while ((ch = getopt_long(argc, argv, "nr:", long_options, NULL)) != -1) {
+	while ((ch = getopt_long(argc, argv, "nr:s:", long_options, NULL)) != -1) {
 		switch (ch) {
 		case 'n':
 			rounds = 0;
 			break;
 		case 'r':
 			rounds = strtoul(optarg, NULL, 10);
+			break;
+		case 's':
+			sshkeyfile = optarg;
 			break;
 		default:
 			return (0);
@@ -134,24 +139,47 @@ cli_generate(int argc, char **argv)
 		return (0);
 	}
 
-	if (rounds > 0) {
-		if (!asignify_generate(seckeyfile, pubkeyfile, 1, rounds,
-				read_password_verify, NULL)) {
-			fprintf(stderr, "Cannot generate keypair\n");
-			return (-1);
+	if (sshkeyfile) {
+		if (rounds > 0) {
+			if (!asignify_privkey_from_ssh(sshkeyfile, seckeyfile, 1, rounds,
+					read_password_verify, NULL)) {
+				fprintf(stderr, "Cannot convert ssh key\n");
+				return (-1);
+			}
+		}
+		else {
+			if (!asignify_privkey_from_ssh(sshkeyfile, seckeyfile, 1, 0,
+					NULL, NULL)) {
+				fprintf(stderr, "Cannot convert ssh key\n");
+				return (-1);
+			}
+		}
+
+		if (!quiet) {
+			printf("%s secret key is saved in %s\n",
+					rounds > 0 ? "Encrypted" : "Unencrypted", seckeyfile);
 		}
 	}
 	else {
-		if (!asignify_generate(seckeyfile, pubkeyfile, 1, 0,
-				NULL, NULL)) {
-			fprintf(stderr, "Cannot generate keypair\n");
-			return (-1);
+		if (rounds > 0) {
+			if (!asignify_generate(seckeyfile, pubkeyfile, 1, rounds,
+					read_password_verify, NULL)) {
+				fprintf(stderr, "Cannot generate keypair\n");
+				return (-1);
+			}
 		}
-	}
+		else {
+			if (!asignify_generate(seckeyfile, pubkeyfile, 1, 0,
+					NULL, NULL)) {
+				fprintf(stderr, "Cannot generate keypair\n");
+				return (-1);
+			}
+		}
 
-	if (!quiet) {
-		printf("%s keypair is saved in %s (private) and %s (public)\n",
-			rounds > 0 ? "Encrypted" : "Unencrypted", seckeyfile, pubkeyfile);
+		if (!quiet) {
+			printf("%s keypair is saved in %s (private) and %s (public)\n",
+					rounds > 0 ? "Encrypted" : "Unencrypted", seckeyfile, pubkeyfile);
+		}
 	}
 
 	return (1);
