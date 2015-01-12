@@ -240,6 +240,28 @@ bool asignify_encrypt_load_privkey(asignify_encrypt_t *ctx, const char *privf,
 	asignify_password_cb password_cb, void *d);
 
 /**
+ * Encrypt and sign the specified file using remote pubkey and local privkey
+ * @param ctx encrypt context
+ * @param version version of encryption
+ * @param inf input file
+ * @param outf output file (MUST be a regular file)
+ * @return true if input has been encrypted and signed
+ */
+bool
+asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
+	const char *inf, const char *outf);
+
+/**
+ * Validate and decrypt the specified file using remote pubkey and local privkey
+ * @param ctx encrypt context
+ * @param inf input file (MUST be a regular file)
+ * @param outf output file
+ * @return true if input has been verified and decrypted
+ */
+bool
+asignify_encrypt_decrypt_file(asignify_encrypt_t *ctx, const char *inf,
+	const char *outf);
+/**
  * Returns last error for encrypt context
  * @param ctx encrypt context
  * @return constant string corresponding to the last error occurred during signing

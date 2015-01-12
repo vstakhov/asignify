@@ -140,19 +140,38 @@ cli_encrypt(int argc, char **argv)
 		return (-1);
 	}
 
-	if (!asignify_encrypt_crypt_file(enc, 1, infile, outfile)) {
-		fprintf(stderr, "cannot load encrypt file %s: %s\n", infile,
-			asignify_encrypt_get_error(enc));
-		//unlink(outfile);
-		asignify_encrypt_free(enc);
-		return (-1);
+	if (decrypt) {
+		if (!asignify_encrypt_decrypt_file(enc, infile, outfile)) {
+			fprintf(stderr, "cannot decrypt file %s: %s\n", infile,
+				asignify_encrypt_get_error(enc));
+			unlink(outfile);
+			asignify_encrypt_free(enc);
+			return (-1);
+		}
+	}
+	else {
+		if (!asignify_encrypt_crypt_file(enc, 1, infile, outfile)) {
+			fprintf(stderr, "cannot encrypt file %s: %s\n", infile,
+				asignify_encrypt_get_error(enc));
+			unlink(outfile);
+			asignify_encrypt_free(enc);
+			return (-1);
+		}
 	}
 
 	asignify_encrypt_free(enc);
 
 	if (!quiet) {
-		printf("Signed %s using local secret key %s and remote public key %s, result saved in %s\n",
+		if (decrypt) {
+			printf("Decrypted and verified %s using local secret key %s and remote "
+				"public key %s, result saved in %s\n",
 				infile, seckeyfile, pubkeyfile, outfile);
+		}
+		else {
+			printf("Encrypted and signed %s using local secret key %s and remote "
+					"public key %s, result saved in %s\n",
+				infile, seckeyfile, pubkeyfile, outfile);
+		}
 	}
 
 	return (1);

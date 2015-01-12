@@ -42,7 +42,7 @@
 #include "asignify_internal.h"
 #include "tweetnacl.h"
 
-#define ENCRYPTED_MAGIC "asignify-encrypted"
+#define ENCRYPTED_MAGIC "asignify-encrypted:"
 #define ENCRYPTED_SIGNATURE_MAGIC "chacha20-blake2"
 #define CHACHA_ROUNDS 20
 
@@ -118,7 +118,8 @@ asignify_encrypt_load_pubkey(asignify_encrypt_t *ctx, const char *pubf)
 	return (ret);
 }
 
-#define ENCRYPTED_PAYLOAD_LEN crypto_box_NONCEBYTES + crypto_box_ZEROBYTES + 8 + 32
+#define ENCRYPTED_PAYLOAD_LEN (crypto_box_NONCEBYTES + crypto_box_ZEROBYTES + 8 + 32)
+#define ENCRYPT_VERIFY_SIG_LEN (BLAKE2B_OUTBYTES + crypto_sign_BYTES + sizeof(ENCRYPTED_SIGNATURE_MAGIC) - 1)
 
 bool
 asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
@@ -131,7 +132,7 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 	unsigned char curvepk[crypto_box_PUBLICKEYBYTES],
 		curvesk[crypto_box_SECRETKEYBYTES],
 		session_key[ENCRYPTED_PAYLOAD_LEN], *p,
-		dig[BLAKE2B_OUTBYTES + crypto_sign_BYTES + sizeof(ENCRYPTED_SIGNATURE_MAGIC) - 1];
+		dig[ENCRYPT_VERIFY_SIG_LEN];
 	char *b64;
 	blake2b_state sh;
 	chacha_state enc_st;
@@ -176,6 +177,7 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 	out_fd = fileno(out);
 	if (fstat(out_fd, &st) == -1 || !S_ISREG(st.st_mode)) {
 		fclose(out);
+		fclose(in);
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
 
 		return (false);
@@ -198,16 +200,18 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 
 	/* Encrypt now the session key */
 	crypto_box(session_key + crypto_box_NONCEBYTES, /* begin of cryptobox */
-		session_key + crypto_box_NONCEBYTES + crypto_box_ZEROBYTES, /* begin of decrypted session key */
-		crypto_stream_NONCEBYTES + crypto_stream_KEYBYTES, /* session key + session nonce */
+		session_key + crypto_box_NONCEBYTES, /* begin of decrypted session key */
+		ENCRYPTED_PAYLOAD_LEN - crypto_box_NONCEBYTES, /* session key + session nonce */
 		session_key, /* session nonce */
 		curvepk, curvesk);
 
 	/* Write key header */
 	memset(dig, 0, crypto_sign_BYTES);
 	b64 = xmalloc(ENCRYPTED_PAYLOAD_LEN * 2);
+	b64_ntop(ctx->pubk->id, ctx->pubk->id_len, b64, ENCRYPTED_PAYLOAD_LEN * 2);
+	fprintf(out, "%s%d:%s:", ENCRYPTED_MAGIC, version, b64);
 	b64_ntop(session_key, ENCRYPTED_PAYLOAD_LEN, b64, ENCRYPTED_PAYLOAD_LEN * 2);
-	fprintf(out, "%s:%d:%s:", ENCRYPTED_MAGIC, version, b64);
+	fprintf(out, "%s:", b64);
 
 	/* Write fake signature */
 	sig_pos = ftell(out);
@@ -215,10 +219,11 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 	fprintf(out, "%s\n", b64);
 
 	blake2b_init(&sh, BLAKE2B_OUTBYTES);
+	blake2b_update(&sh, session_key, sizeof(session_key));
 
 	while((r = fread(buf, 1, sizeof(buf), in)) > 0) {
-		blake2b_update(&sh, buf, r);
-		chacha_update(&enc_st, buf, outbuf, r);
+		r = chacha_update(&enc_st, buf, outbuf, r);
+		blake2b_update(&sh, outbuf, r);
 
 		if (fwrite(outbuf, 1, r, out) != r) {
 			ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
@@ -228,6 +233,7 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 	}
 
 	if ((r = chacha_final(&enc_st, outbuf)) > 0) {
+		blake2b_update(&sh, outbuf, r);
 		if (fwrite(outbuf, 1, r, out) != r) {
 			ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
 
@@ -260,13 +266,187 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 	b64_ntop(dig, crypto_sign_BYTES, b64, ENCRYPTED_PAYLOAD_LEN * 2);
 	fprintf(out, "%s", b64);
 
+	ret = true;
+
+cleanup:
 	fclose(out);
 	fclose(in);
+	explicit_memzero(&enc_st, sizeof(enc_st));
+	return (ret);
+}
+
+bool
+asignify_encrypt_decrypt_file(asignify_encrypt_t *ctx,
+	const char *inf, const char *outf)
+{
+	FILE *in, *out;
+	int in_fd, r;
+	off_t sig_pos = 0;
+	struct stat st;
+	unsigned char curvepk[crypto_box_PUBLICKEYBYTES],
+		curvesk[crypto_box_SECRETKEYBYTES],
+		session_key[ENCRYPTED_PAYLOAD_LEN], *p,
+		dig[ENCRYPT_VERIFY_SIG_LEN];
+	char *line = NULL;
+	size_t linelen = 0;
+	struct asignify_public_data *enc = NULL;
+	blake2b_state sh;
+	chacha_state enc_st;
+	SHA2_CTX dig_st;
+	unsigned char h[crypto_sign_HASHBYTES];
+	bool ret = false;
+#if BUFSIZ >= 2048
+	unsigned char buf[BUFSIZ], outbuf[BUFSIZ];
+#else
+	/* BUFSIZ is insanely small */
+	unsigned char buf[4096], outbuf[4096];
+#endif
+
+	if (ctx == NULL || ctx->privk == NULL || ctx->pubk == NULL) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_MISUSE);
+		return (false);
+	}
+
+	/* Ensure that we are not trying to encrypt using the related keypair */
+	if (ctx->pubk->id_len == ctx->privk->id_len && ctx->privk->id_len > 0) {
+		if (memcmp(ctx->pubk->id, ctx->privk->id, ctx->privk->id_len) == 0) {
+			ctx->error = xerr_string(ASIGNIFY_ERROR_WRONG_KEYPAIR);
+			return (false);
+		}
+
+	}
+
+	in = xfopen(inf, "r");
+
+	if (in == NULL) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+		return (false);
+	}
+
+	out = xfopen(outf, "w");
+	if (out == NULL) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+		fclose(in);
+		return (false);
+	}
+
+	/* Since we need to seek, we must ensure that the file is a normal file */
+	in_fd = fileno(in);
+	if (fstat(in_fd, &st) == -1 || !S_ISREG(st.st_mode)) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+		goto cleanup;
+	}
+
+	if ((r = getline(&line, &linelen, in)) < 0) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+		goto cleanup;
+	}
+
+	enc = asignify_public_data_load(line, r, ENCRYPTED_MAGIC,
+		sizeof(ENCRYPTED_MAGIC) - 1, 1, 1, KEY_ID_LEN, ENCRYPTED_PAYLOAD_LEN);
+	if (enc == NULL || enc->aux == NULL || enc->version != 1) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
+		goto cleanup;
+	}
+
+	if (ctx->privk->id_len > 0 && (ctx->privk->id_len != enc->id_len ||
+			memcmp(ctx->privk->id, enc->id, enc->id_len) != 0)) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_WRONG_KEY);
+		goto cleanup;
+	}
+
+	/*
+	 * Now we have encrypted session key in enc->data and signature in
+	 * enc->aux, so decode aux first (aux is null terminated)
+	 */
+	if (b64_pton((const char*)enc->aux, dig, crypto_sign_BYTES) != crypto_sign_BYTES) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
+		goto cleanup;
+	}
+
+	sig_pos = ftell(in);
+
+	blake2b_init(&sh, BLAKE2B_OUTBYTES);
+	blake2b_update(&sh, enc->data, enc->data_len);
+
+	while((r = fread(buf, 1, sizeof(buf), in)) > 0) {
+		blake2b_update(&sh, buf, r);
+	}
+
+	p = dig;
+	p += crypto_sign_BYTES;
+	memcpy(p, ENCRYPTED_SIGNATURE_MAGIC, sizeof(ENCRYPTED_SIGNATURE_MAGIC) - 1);
+	p += sizeof(ENCRYPTED_SIGNATURE_MAGIC) - 1;
+	blake2b_final(&sh, p, BLAKE2B_OUTBYTES);
+
+	SHA512Init(&dig_st);
+	SHA512Update(&dig_st, dig, 32);
+	SHA512Update(&dig_st, ctx->pubk->data, 32);
+	SHA512Update(&dig_st, dig + crypto_sign_BYTES, sizeof(dig) - crypto_sign_BYTES);
+	SHA512Final(h, &dig_st);
+
+	if (crypto_sign_verify_detached(dig, h, ctx->pubk->data) != 0) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_VERIFY);
+		goto cleanup;
+	}
+
+	if (fseek(in, sig_pos, SEEK_SET) != 0) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+		goto cleanup;
+	}
+
+	/* We have successfully verified signature, so we can process with output */
+	crypto_sign_ed25519_sk_to_curve25519(curvesk, ctx->privk->data);
+	crypto_sign_ed25519_pk_to_curve25519(curvepk, ctx->pubk->data);
+
+	memcpy(session_key, enc->data, sizeof(session_key));
+
+	if (crypto_box_open(session_key + crypto_box_NONCEBYTES,
+			session_key + crypto_box_NONCEBYTES,
+			ENCRYPTED_PAYLOAD_LEN - crypto_box_NONCEBYTES,
+			session_key,
+			curvepk, curvesk) != 0) {
+
+		ctx->error = xerr_string(ASIGNIFY_ERROR_VERIFY);
+		goto cleanup;
+	}
+
+	/* Move to the real payload */
+	p = session_key + crypto_box_ZEROBYTES + crypto_box_NONCEBYTES;
+	chacha_init(&enc_st, (chacha_key *)(p + 8), (chacha_iv *)p, CHACHA_ROUNDS);
+
+	explicit_memzero(session_key, sizeof(session_key));
+
+	/* Write decrypted data */
+
+	while((r = fread(buf, 1, sizeof(buf), in)) > 0) {
+		r = chacha_update(&enc_st, buf, outbuf, r);
+
+		if (fwrite(outbuf, 1, r, out) != r) {
+			ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+
+			goto cleanup;
+		}
+	}
+
+	if ((r = chacha_final(&enc_st, outbuf)) > 0) {
+		if (fwrite(outbuf, 1, r, out) != r) {
+			ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+
+			goto cleanup;
+		}
+	}
 
 	ret = true;
 
 cleanup:
+	fclose(out);
+	fclose(in);
+	explicit_memzero(session_key, sizeof(session_key));
 	explicit_memzero(&enc_st, sizeof(enc_st));
+	explicit_memzero(h, sizeof(h));
+	asignify_public_data_free(enc);
+
 	return (ret);
 }
 

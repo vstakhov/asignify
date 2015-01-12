@@ -59,6 +59,7 @@ const char* err_str[ASIGNIFY_ERROR_MAX] = {
 	[ASIGNIFY_ERROR_VERIFY_DIGEST] = "digest verification error",
 	[ASIGNIFY_ERROR_NO_DIGEST] = "digest is missing for the file specified",
 	[ASIGNIFY_ERROR_WRONG_KEYPAIR] = "cannot encrypt using related keypair",
+	[ASIGNIFY_ERROR_WRONG_KEY] = "wrong key specified",
 	[ASIGNIFY_ERROR_SIZE] = "size mismatch"
 };
 
