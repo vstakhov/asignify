@@ -39,8 +39,10 @@ extern "C" {
  */
 struct asignify_verify_ctx;
 struct asignify_sign_ctx;
+struct asignify_encrypt_ctx;
 typedef struct asignify_verify_ctx asignify_verify_t;
 typedef struct asignify_sign_ctx asignify_sign_t;
+typedef struct asignify_encrypt_ctx asignify_encrypt_t;
 
 typedef int (*asignify_password_cb)(char *buf, size_t len, void *d);
 
