@@ -144,15 +144,19 @@ It may  fail because of one of the following reasons:
 =head1 EXAMPLES
 
 F<Create a new key pair:>
+
  $ asignify generate keys/key.secret keys/key.public
 
 F<Sign a file, specifying a signature name:>
+
  $ asignify sign -d blake2 keys/key.secret motd.sig /etc/motd
 
 F<Verify a signature:>
+
  $ asignify verify keys/key.public motd.sig
 
 F<Verify a signed digest list:>
+
  $ asignify check keys/key.public motd.sig /etc/motd
 
 
