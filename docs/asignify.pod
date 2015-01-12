@@ -1,0 +1,148 @@
+=head1 NAME
+
+asignify - cryptographically sign and verify files.
+
+=head1 SYNOPSIS
+
+B<asignify> [-q] verify pubkey signature
+
+B<asignify> [-q] check pubkey signature file [file...]
+
+B<asignify> [-q] sign [-n] [-d <digest>] secretkey signature [file1 [file2...]]
+
+B<asignify> [-q] generate [-n] [-r <rounds>] secretkey [publickey]
+
+=head1 DESCRIPTION
+
+The asignify utility creates and verifies cryptographic signatures. A signature verifies the integrity of a message. 
+Asignify support various hash functions for singing.
+
+The mode of operation is selected with the following options:
+
+=over 8
+
+=item B<-q>
+
+Quiet mode. Suppress informational output.
+
+=item B<verify>	
+
+Verify the message and signature match:
+
+=over 12
+
+=item B<pubkey> 
+
+Name of the file with a public key.
+
+=item B<signature>
+
+Name of signature file.
+
+=back
+
+=item B<generate>
+
+Generate a new key pair of secret and public keys:
+
+=over 12
+
+=item B<-n>
+
+Do not ask for a passphrase during key generation. Otherwise, asignify will prompt the user for a passphrase to protect the secret key.
+
+=item B<-r>
+
+Indicate a number of iterations (rounds) used by PBKDF algorithm (default number of rounds: 10000).
+
+=item B<secretkey>
+
+Mandatory path to file where secret key will be writen.
+
+=item B<pubkey>
+
+Optional path to file where public key will be writed and by default will be generated from as I<[secretkey]>.pub.
+
+=back
+
+=item B<sign>
+
+Sign the specified message and create a signature:
+
+=over 12
+
+=item B<-n>
+
+Do not record files sizes in signature file.
+
+=item B<-d>
+
+Indicate a hash function which will be used for singing. Currently the asignify has support of following hashes: 
+sha256(1), sha512(1), blake2 (default if none is defined).
+
+=item B<secretkey>
+
+Name of the file with a secret key.
+
+=item B<signature>
+
+Name of file where signature will be writed.
+
+=item B<file>
+
+List of file(s) for which digests will be calculated and writen as I<[signature]>.
+
+=back
+
+=item B<check>
+
+Verify a signed checksum list, and then verify the checksum for each file:
+
+=over 12
+
+=item B<pubkey>
+
+Name of the file with a public key.
+
+=item B<signature>
+
+Name of signature file.
+
+=item B<file>
+
+List of files which digests need to be verified.
+
+=back
+
+=back
+
+=head1 EXIT STATUS
+
+The asignify utility exits 0 on success, and >0 if an error occurs.
+It may  fail because of one of the following reasons:
+
+=over 4
+
+=item - Some necessary files do not exist.
+
+=item - Entered passphrase is incorrect.
+
+=item - The message file was corrupted and its signature does not match.
+
+=back
+
+=head1 EXAMPLES
+
+F<Create a new key pair:>
+ $ asignify generate keys/key.secret keys/key.public
+
+F<Sign a file, specifying a signature name:>
+ $ asignify sign -d blake2 keys/key.secret motd.sig /etc/motd
+
+F<Verify a signature:>
+ $ asignify verify keys/key.public motd.sig
+
+F<Verify a signed digest list:>
+ $ asignify check keys/key.public motd.sig /etc/motd
+
+
