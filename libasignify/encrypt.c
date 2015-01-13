@@ -343,7 +343,7 @@ asignify_encrypt_decrypt_file(asignify_encrypt_t *ctx,
 	}
 
 	enc = asignify_public_data_load(line, r, ENCRYPTED_MAGIC,
-		sizeof(ENCRYPTED_MAGIC) - 1, 1, 1, KEY_ID_LEN, ENCRYPTED_PAYLOAD_LEN);
+		sizeof(ENCRYPTED_MAGIC) - 1, 1, 1, ctx->privk->id_len, ENCRYPTED_PAYLOAD_LEN);
 	if (enc == NULL || enc->aux == NULL || enc->version != 1) {
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
 		goto cleanup;
