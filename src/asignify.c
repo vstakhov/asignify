@@ -50,9 +50,11 @@ usage(const char *error)
 	    "\tasignify [-q] %s\n"
 	    "\tasignify [-q] %s\n"
 	    "\tasignify [-q] %s\n"
+	    "\tasignify [-q] %s\n"
 	    "\tasignify [-q] %s\n",
 	    cli_verify_help(false), cli_check_help(false),
-	    cli_sign_help(false), cli_generate_help(false));
+	    cli_sign_help(false), cli_generate_help(false),
+	    cli_encrypt_help(false));
 
 	exit(EXIT_FAILURE);
 }
@@ -186,6 +188,8 @@ main(int argc, char **argv)
 	}
 	else if (strcasecmp(argv[0], "help") == 0) {
 		help(false, argc - 1, argv + 1);
+	} else {
+		usage("unknown command");
 	}
 
 	if (ret == 0) {
