@@ -214,6 +214,7 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 	fprintf(out, "%s:", b64);
 
 	/* Write fake signature */
+	fflush(out);
 	sig_pos = ftell(out);
 	b64_ntop(dig, crypto_sign_BYTES, b64, ENCRYPTED_PAYLOAD_LEN * 2);
 	fprintf(out, "%s\n", b64);

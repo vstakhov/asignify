@@ -305,6 +305,8 @@ chacha_update(chacha_state *S, const unsigned char *in, unsigned char *out, size
 size_t
 chacha_final(chacha_state *S, unsigned char *out) {
 	chacha_state_internal *state = (chacha_state_internal *)S;
+	size_t ret;
+
 	if (state->leftover) {
 		if (chacha_is_aligned(out)) {
 			chacha_blocks(state, state->buffer, out, state->leftover);
@@ -313,7 +315,9 @@ chacha_final(chacha_state *S, unsigned char *out) {
 			memcpy(out, state->buffer, state->leftover);
 		}
 	}
+
+	ret = state->leftover;
 	explicit_memzero(S, sizeof(chacha_state));
 
-	return state->leftover;
+	return ret;
 }
