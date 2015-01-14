@@ -187,14 +187,14 @@ asignify_verify_parse_files(struct asignify_verify_ctx *ctx, const char *data,
 		PARSE_ERROR,
 		PARSE_FINISH
 	} state = PARSE_START, next_state = PARSE_START;
-	const char *p, *end, *c;
+	const unsigned char *p, *end, *c;
 	char *fbuf;
 	khiter_t k;
 	int r;
 	struct asignify_file *cur_file = NULL;
 	enum asignify_digest_type dig_type = ASIGNIFY_DIGEST_MAX;
 
-	p = data;
+	p = (unsigned char *)data;
 	end = p + dlen;
 	c = p;
 
@@ -222,7 +222,7 @@ asignify_verify_parse_files(struct asignify_verify_ctx *ctx, const char *data,
 			else {
 				if (*p == ' ') {
 					/* Check algorithm */
-					dig_type = asignify_digest_from_str(c, p - c);
+					dig_type = asignify_digest_from_str((const char *)c, p - c);
 					if (dig_type == ASIGNIFY_DIGEST_MAX) {
 						state = PARSE_ERROR;
 					}
@@ -309,7 +309,8 @@ asignify_verify_parse_files(struct asignify_verify_ctx *ctx, const char *data,
 				p ++;
 			}
 			else if (*p == '\n' || *p == '\0') {
-				if (!asignify_verify_parse_digest(c, p - c, dig_type, cur_file)) {
+				if (!asignify_verify_parse_digest((const char *)c, p - c,
+						dig_type, cur_file)) {
 					state = PARSE_ERROR;
 				}
 				else {

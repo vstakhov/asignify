@@ -274,7 +274,7 @@ static bool
 asignify_private_data_parse_line(const char *buf, size_t buflen,
 	struct asignify_private_key *privk)
 {
-	const char *p, *end, *c;
+	const unsigned char *p, *end, *c;
 	enum {
 		PARSE_NAME = 0,
 		PARSE_SEMICOLON,
@@ -285,16 +285,16 @@ asignify_private_data_parse_line(const char *buf, size_t buflen,
 	const struct asignify_privkey_parser *parser = NULL;
 	struct field_search_key k;
 
-	p = buf;
-	end = buf + buflen;
-	c = buf;
+	p = (unsigned char *)buf;
+	end = p + buflen;
+	c = p;
 
 	while (p < end) {
 		switch (state) {
 		case PARSE_NAME:
 			if (*p == ':') {
 				if (p - c > 0) {
-					k.begin = c;
+					k.begin = (const char *)c;
 					k.len = p - c;
 					parser = bsearch(&k, parser_fields,
 						sizeof(parser_fields) / sizeof(parser_fields[0]),
@@ -333,7 +333,8 @@ asignify_private_data_parse_line(const char *buf, size_t buflen,
 				state = PARSE_ERROR;
 			}
 			else if (*p == '\n') {
-				if (!asignify_private_data_parse_value(c, p - c, parser, privk)) {
+				if (!asignify_private_data_parse_value((const char *)c, p - c,
+						parser, privk)) {
 					state = PARSE_ERROR;
 				}
 				else {
