@@ -68,6 +68,7 @@ asignify_sign_load_privkey(asignify_sign_t *ctx, const char *privf,
 	int error = ASIGNIFY_ERROR_FORMAT;
 
 	if (ctx == NULL || privf == NULL) {
+		CTX_MAYBE_SET_ERR(ctx, ASIGNIFY_ERROR_MISUSE);
 		return (false);
 	}
 
@@ -100,7 +101,7 @@ asignify_sign_add_file(asignify_sign_t *ctx, const char *f,
 	struct asignify_file_digest *dig;
 
 	if (ctx == NULL || f == NULL || dt >= ASIGNIFY_DIGEST_MAX) {
-		ctx->error = xerr_string(ASIGNIFY_ERROR_MISUSE);
+		CTX_MAYBE_SET_ERR(ctx, ASIGNIFY_ERROR_MISUSE);
 		return (false);
 	}
 
@@ -151,7 +152,7 @@ asignify_sign_write_signature(asignify_sign_t *ctx, const char *sigf)
 	FILE *outf;
 
 	if (ctx == NULL || ctx->privk == NULL || kv_size(ctx->files) == 0) {
-		ctx->error = xerr_string(ASIGNIFY_ERROR_MISUSE);
+		CTX_MAYBE_SET_ERR(ctx, ASIGNIFY_ERROR_MISUSE);
 		return (false);
 	}
 

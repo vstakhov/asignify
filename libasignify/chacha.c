@@ -27,9 +27,9 @@ static chacha_int32
 U8TO32(const unsigned char *p) {
 	return
 	(((chacha_int32)(p[0])      ) |
-	 ((chacha_int32)(p[1]) <<  8) |
-	 ((chacha_int32)(p[2]) << 16) |
-	 ((chacha_int32)(p[3]) << 24));
+	 (((chacha_int32)p[1]) <<  8) |
+	 (((chacha_int32)p[2]) << 16) |
+	 (((chacha_int32)p[3]) << 24));
 }
 
 /* store a 32 bit unsigned integer as four 8 bit unsigned integers in little endian */

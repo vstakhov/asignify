@@ -400,9 +400,7 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 	bool ret = false;
 
 	if (ctx == NULL || ctx->pk_chain == NULL) {
-		if (ctx) {
-			ctx->error = xerr_string(ASIGNIFY_ERROR_MISUSE);
-		}
+		CTX_MAYBE_SET_ERR(ctx, ASIGNIFY_ERROR_MISUSE);
 		return (false);
 	}
 
@@ -462,9 +460,7 @@ asignify_verify_file(asignify_verify_t *ctx, const char *checkf)
 	unsigned char *calc_digest;
 
 	if (ctx == NULL || ctx->files == NULL) {
-		if (ctx) {
-			ctx->error = xerr_string(ASIGNIFY_ERROR_MISUSE);
-		}
+		CTX_MAYBE_SET_ERR(ctx, ASIGNIFY_ERROR_MISUSE);
 		return (false);
 	}
 

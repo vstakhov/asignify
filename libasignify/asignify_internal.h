@@ -128,6 +128,12 @@ enum asignify_error {
 	ASIGNIFY_ERROR_MAX
 };
 
+#define CTX_MAYBE_SET_ERR(ctx, err) do { \
+	if ((ctx) != NULL) {	\
+		(ctx)->error = xerr_string((err)); \
+	}	\
+} while(0)
+
 const char * xerr_string(enum asignify_error code);
 
 /*

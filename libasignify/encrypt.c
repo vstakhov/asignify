@@ -71,6 +71,7 @@ asignify_encrypt_load_privkey(asignify_encrypt_t *ctx, const char *privf,
 	int error = ASIGNIFY_ERROR_FORMAT;
 
 	if (ctx == NULL || privf == NULL) {
+		CTX_MAYBE_SET_ERR(ctx, ASIGNIFY_ERROR_MISUSE);
 		return (false);
 	}
 
@@ -146,7 +147,7 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 #endif
 
 	if (ctx == NULL || ctx->privk == NULL || ctx->pubk == NULL || version != 1) {
-		ctx->error = xerr_string(ASIGNIFY_ERROR_MISUSE);
+		CTX_MAYBE_SET_ERR(ctx, ASIGNIFY_ERROR_MISUSE);
 		return (false);
 	}
 
@@ -304,7 +305,7 @@ asignify_encrypt_decrypt_file(asignify_encrypt_t *ctx,
 #endif
 
 	if (ctx == NULL || ctx->privk == NULL || ctx->pubk == NULL) {
-		ctx->error = xerr_string(ASIGNIFY_ERROR_MISUSE);
+		CTX_MAYBE_SET_ERR(ctx, ASIGNIFY_ERROR_MISUSE);
 		return (false);
 	}
 
