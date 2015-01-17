@@ -161,7 +161,7 @@ asignify_public_data_load(const char *buf, size_t buflen, const char *magic,
 	}
 
 	res = xmalloc0(sizeof(*res));
-	res->version = 1;
+	res->version = version;
 	res->data_len = data_len;
 	res->id_len = id_len;
 	asignify_alloc_public_data_fields(res);
