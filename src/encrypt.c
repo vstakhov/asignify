@@ -71,13 +71,14 @@ cli_encrypt_help(bool full)
 		"asignify [global_opts] encrypt/decrypt - encrypt or decrypt a file\n\n"
 		"Usage: asignify encrypt [-d] <secretkey> <pubkey> <in> <out>\n"
 		"\t-d            Perform decryption\n"
+		"\t-f            Use less safe but faster encryption (chacha8)\n"
 		"\tsecretkey     Path to a secret key file encrypt and sign\n"
 		"\tpubkey        Path to a peer's public key (must not be related to secretkey)\n"
 		"\tin            Path to input file\n"
 		"\tout           Path to ouptut file (must be a regular file)\n";
 
 	if (!full) {
-		return ("encrypt [-d] <secretkey> <pubkey> <in> <out>");
+		return ("encrypt [-d] [-f] <secretkey> <pubkey> <in> <out>");
 	}
 
 	return (fullmsg);
@@ -91,9 +92,10 @@ cli_encrypt(int argc, char **argv)
 				*infile = NULL, *outfile = NULL;
 	int ch;
 	bool decrypt = false;
+	enum asignify_encrypt_type type = ASIGNIFY_ENCRYPT_SAFE;
 	static struct option long_options[] = {
-		{"no-size",   no_argument,     0,  'n' },
-		{"digest", 	required_argument, 0,  'd' },
+		{"fast",   no_argument,     0,  'f' },
+		{"decrypt", 	required_argument, 0,  'd' },
 		{0,         0,                 0,  0 }
 	};
 
@@ -101,10 +103,13 @@ cli_encrypt(int argc, char **argv)
 		decrypt = true;
 	}
 
-	while ((ch = getopt_long(argc, argv, "d", long_options, NULL)) != -1) {
+	while ((ch = getopt_long(argc, argv, "df", long_options, NULL)) != -1) {
 		switch (ch) {
 		case 'd':
 			decrypt = true;
+			break;
+		case 'f':
+			type = ASIGNIFY_ENCRYPT_FAST;
 			break;
 		default:
 			return (0);
@@ -150,7 +155,7 @@ cli_encrypt(int argc, char **argv)
 		}
 	}
 	else {
-		if (!asignify_encrypt_crypt_file(enc, 1, infile, outfile)) {
+		if (!asignify_encrypt_crypt_file(enc, 1, infile, outfile, type)) {
 			fprintf(stderr, "cannot encrypt file %s: %s\n", infile,
 				asignify_encrypt_get_error(enc));
 			unlink(outfile);
