@@ -58,6 +58,14 @@ enum asignify_digest_type {
 };
 
 /**
+ * Encryption type
+ */
+enum asignify_encrypt_type {
+	ASIGNIFY_ENCRYPT_SAFE = 0,
+	ASIGNIFY_ENCRYPT_FAST
+};
+
+/**
  * Initialize verify context
  * @return new verify context or NULL
  */
@@ -249,7 +257,7 @@ bool asignify_encrypt_load_privkey(asignify_encrypt_t *ctx, const char *privf,
  */
 bool
 asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
-	const char *inf, const char *outf);
+	const char *inf, const char *outf, enum asignify_encrypt_type type);
 
 /**
  * Validate and decrypt the specified file using remote pubkey and local privkey

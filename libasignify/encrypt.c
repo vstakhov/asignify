@@ -44,7 +44,8 @@
 
 #define ENCRYPTED_MAGIC "asignify-encrypted:"
 #define ENCRYPTED_SIGNATURE_MAGIC "chacha20-blake2"
-#define CHACHA_ROUNDS 20
+#define CHACHA_ROUNDS_SAFE 20
+#define CHACHA_ROUNDS_FAST 8
 
 struct asignify_encrypt_ctx {
 	struct asignify_private_data *privk;
@@ -124,7 +125,7 @@ asignify_encrypt_load_pubkey(asignify_encrypt_t *ctx, const char *pubf)
 
 bool
 asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
-	const char *inf, const char *outf)
+	const char *inf, const char *outf, enum asignify_encrypt_type type)
 {
 	FILE *in, *out;
 	int out_fd, r;
@@ -138,6 +139,7 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 	blake2b_state sh;
 	chacha_state enc_st;
 	bool ret = false;
+	int rounds;
 	unsigned long long outlen;
 #if BUFSIZ >= 2048
 	CHACHA_ALIGN( 64 ) unsigned char buf[BUFSIZ], outbuf[BUFSIZ];
@@ -197,7 +199,16 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 	p += 8;
 	randombytes(p, 32);
 
-	chacha_init(&enc_st, (chacha_key *)p, (chacha_iv *)(p - 8), CHACHA_ROUNDS);
+	version *= 100;
+	if (type == ASIGNIFY_ENCRYPT_SAFE) {
+		rounds = CHACHA_ROUNDS_SAFE;
+	}
+	else {
+		rounds = CHACHA_ROUNDS_FAST;
+	}
+	version += rounds;
+
+	chacha_init(&enc_st, (chacha_key *)p, (chacha_iv *)(p - 8), rounds);
 
 	/* Encrypt now the session key */
 	crypto_box(session_key + crypto_box_NONCEBYTES, /* begin of cryptobox */
@@ -295,6 +306,7 @@ asignify_encrypt_decrypt_file(asignify_encrypt_t *ctx,
 	blake2b_state sh;
 	chacha_state enc_st;
 	SHA2_CTX dig_st;
+	int rounds;
 	unsigned char h[crypto_sign_HASHBYTES];
 	bool ret = false;
 #if BUFSIZ >= 2048
@@ -345,8 +357,23 @@ asignify_encrypt_decrypt_file(asignify_encrypt_t *ctx,
 	}
 
 	enc = asignify_public_data_load(line, r, ENCRYPTED_MAGIC,
-		sizeof(ENCRYPTED_MAGIC) - 1, 1, 1, ctx->privk->id_len, ENCRYPTED_PAYLOAD_LEN);
-	if (enc == NULL || enc->aux == NULL || enc->version != 1) {
+		sizeof(ENCRYPTED_MAGIC) - 1, 1, 120, ctx->privk->id_len, ENCRYPTED_PAYLOAD_LEN);
+	if (enc == NULL || enc->aux == NULL) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
+		goto cleanup;
+	}
+
+	if (enc->version == 1) {
+		/* Old format without rounds */
+		rounds = CHACHA_ROUNDS_SAFE;
+	}
+	else if (enc->version == 120) {
+		rounds = CHACHA_ROUNDS_SAFE;
+	}
+	else if (enc->version == 108) {
+		rounds = CHACHA_ROUNDS_FAST;
+	}
+	else {
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
 		goto cleanup;
 	}
@@ -415,7 +442,7 @@ asignify_encrypt_decrypt_file(asignify_encrypt_t *ctx,
 
 	/* Move to the real payload */
 	p = session_key + crypto_box_ZEROBYTES + crypto_box_NONCEBYTES;
-	chacha_init(&enc_st, (chacha_key *)(p + 8), (chacha_iv *)p, CHACHA_ROUNDS);
+	chacha_init(&enc_st, (chacha_key *)(p + 8), (chacha_iv *)p, rounds);
 
 	explicit_memzero(session_key, sizeof(session_key));
 
