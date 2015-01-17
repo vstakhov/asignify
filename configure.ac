@@ -1,9 +1,9 @@
 AC_PREREQ(2.59)
-AC_INIT(asignify, 1.0)
+AC_INIT(asignify, 1.1)
 
 AC_CANONICAL_SYSTEM
 
-ASIGNIFY_LIBRARY_VERSION=1:0:0
+ASIGNIFY_LIBRARY_VERSION=2:0:0
 #                        | | |
 #                 +------+ | +---+
 #                 |        |     |

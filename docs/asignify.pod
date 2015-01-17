@@ -133,6 +133,10 @@ Encrypt a file using local private key and remote public key (and vice-versa for
 
 Decrypt using remote privkey and local pubkey (that is same as invoking this command as B<decrypt>)
 
+=item B<-f, --fast>
+
+Use faster encryption algorithm (namely chacha8 instead of chacha20). It might be useful for embedded plaforms still providing reasonable level of security.
+
 =item B<secretkey>
 
 Name of the file with a secret key: local for encryption and remote for decryption.
