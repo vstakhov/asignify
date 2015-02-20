@@ -126,3 +126,4 @@ AC_CONFIG_FILES(Makefile
                 docs/Makefile)
 AC_CONFIG_HEADERS(config.h)
 AC_OUTPUT
+
