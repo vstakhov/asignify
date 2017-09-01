@@ -128,7 +128,7 @@ asignify_private_data_sign(struct asignify_private_data *privk,
 	unsigned long long outlen = len;
 
 	if (buf != NULL && len > 0 && privk != NULL) {
-		res = xmalloc(sizeof(*res));
+		res = xmalloc0(sizeof(*res));
 		res->version = privk->version;
 		res->id_len = privk->id_len;
 		res->data_len = crypto_sign_BYTES;
