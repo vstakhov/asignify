@@ -68,7 +68,6 @@ static const unsigned int digests_sizes[ASIGNIFY_DIGEST_MAX] = {
 	[ASIGNIFY_DIGEST_SHA512] = SHA512_DIGEST_STRING_LENGTH - 1,
 	[ASIGNIFY_DIGEST_SHA256] = SHA256_DIGEST_STRING_LENGTH - 1,
 	[ASIGNIFY_DIGEST_BLAKE2] = BLAKE2B_OUTBYTES * 2,
-	[ASIGNIFY_DIGEST_SIZE] = 0
 };
 
 struct asignify_pubkey_chain {
@@ -142,13 +141,9 @@ asignify_verify_parse_digest(const char *data, ssize_t dlen,
 	char *errstr;
 	uint64_t flen;
 	struct asignify_file_digest *dig;
-	unsigned int dig_len;
+	unsigned int dig_len, dig_strlen;
 
-	if (dlen <= 0 || type >= ASIGNIFY_DIGEST_MAX || f == NULL) {
-		return (false);
-	}
-
-	if (digests_sizes[type] > 0 && digests_sizes[type] != dlen) {
+	if (dlen <= 0 || f == NULL) {
 		return (false);
 	}
 
@@ -159,29 +154,37 @@ asignify_verify_parse_digest(const char *data, ssize_t dlen,
 		if (errstr != data + dlen || errno != 0) {
 			return (false);
 		}
+
 		f->size = flen;
+		return (true);
+	} else if (type >= nitems(digests_sizes)) {
+		return (false);
 	}
-	else {
-		dig = xmalloc(sizeof(*dig));
-		dig->digest_type = type;
-		dig_len = asignify_digest_len(type);
 
-		if (dig_len == 0) {
-			free(dig);
-			return (false);
-		}
-
-		dig->digest = xmalloc(dig_len);
-
-		if (hex2bin(dig->digest, dig_len, data, dlen, NULL, NULL) != 0) {
-			free(dig->digest);
-			free(dig);
-			return (false);
-		}
-
-		dig->next = f->digests;
-		f->digests = dig;
+	dig_strlen = digests_sizes[type];
+	if (dig_strlen == 0 || dig_strlen != dlen) {
+		return (false);
 	}
+
+	dig = xmalloc(sizeof(*dig));
+	dig->digest_type = type;
+	dig_len = asignify_digest_len(type);
+
+	if (dig_len == 0) {
+		free(dig);
+		return (false);
+	}
+
+	dig->digest = xmalloc(dig_len);
+
+	if (hex2bin(dig->digest, dig_len, data, dlen, NULL, NULL) != 0) {
+		free(dig->digest);
+		free(dig);
+		return (false);
+	}
+
+	dig->next = f->digests;
+	f->digests = dig;
 
 	return (true);
 }
