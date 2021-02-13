@@ -138,6 +138,36 @@ cleanup:
 	return (ret);
 }
 
+static bool
+asignify_generate_pubkey_internal(struct asignify_private_data *privd,
+		FILE *pubf)
+{
+
+	struct asignify_public_data *pubk;
+	bool ret = true;
+
+	if (privd == NULL || pubf == NULL) {
+		return (false);
+	}
+
+#define	PUBKEY_OFF	(crypto_sign_SECRETKEYBYTES - crypto_sign_PUBLICKEYBYTES)
+	pubk = xmalloc0(sizeof(*pubk));
+	pubk->version = 1;
+	pubk->id = xmalloc(KEY_ID_LEN);
+	pubk->id_len = KEY_ID_LEN;
+	memcpy(pubk->id, privd->id, KEY_ID_LEN);
+	pubk->data_len = crypto_sign_PUBLICKEYBYTES;
+	pubk->data = xmalloc(pubk->data_len);
+	memcpy(pubk->data, privd->data + PUBKEY_OFF, pubk->data_len);
+
+	ret = asignify_pubkey_write(pubk, pubf);
+
+	asignify_public_data_free(pubk);
+	fclose(pubf);
+
+	return (ret);
+}
+
 #define HEX_OUT_PRIVK(privk, field, name, size, f) do {						\
 		hexdata = xmalloc((size) * 2 + 1);									\
 		if(bin2hex(hexdata, (size) * 2 + 1, privk->field, (size)) == NULL) { \
@@ -197,6 +227,35 @@ asignify_generate(const char *privkf, const char *pubkf, unsigned int version,
 	}
 
 	return (false);
+}
+
+bool
+asignify_generate_pubkey(const char *privkf, const char *pubkf,
+		asignify_password_cb password_cb, void *d)
+{
+	FILE *privf, *pubf;
+	struct asignify_private_data *privd = NULL;
+	int error;
+	bool ret;
+
+	privf = xfopen(privkf, "r");
+	pubf = xfopen(pubkf, "w");
+
+	if (!privf || !pubf) {
+		return (false);
+	}
+
+	privd = asignify_private_data_load(privf, &error, password_cb, d);
+	if (privd == NULL) {
+		/* XXX */
+		(void)error;
+		return (false);
+	}
+
+	ret = asignify_generate_pubkey_internal(privd, pubf);
+
+	asignify_private_data_free(privd);
+	return (ret);
 }
 
 bool
