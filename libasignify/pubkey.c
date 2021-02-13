@@ -63,7 +63,7 @@ asignify_pubkey_try_obsd(const char *buf, size_t buflen,
 
 	if (b64_pton(buf, (unsigned char *)&opk, sizeof(opk)) == sizeof(opk)) {
 		if (memcmp(opk.pkalg, OBSD_PKALG, sizeof(opk.pkalg)) == 0) {
-			res = xmalloc(sizeof(*res));
+			res = xmalloc0(sizeof(*res));
 			/* OpenBSD version code */
 			res->version = 0;
 			res->data_len = sizeof(opk.pubkey);

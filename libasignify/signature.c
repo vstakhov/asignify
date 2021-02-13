@@ -66,7 +66,7 @@ asignify_sig_try_obsd(const char *buf, size_t buflen,
 
 	if (b64_pton(buf, (unsigned char *)&osig, sizeof(osig)) == sizeof(osig)) {
 		if (memcmp(osig.sigalg, OBSD_SIGALG, sizeof(osig.sigalg)) == 0) {
-			res = xmalloc(sizeof(*res));
+			res = xmalloc0(sizeof(*res));
 			/* OpenBSD version code */
 			res->version = 0;
 			res->data_len = sizeof(osig.sig);
