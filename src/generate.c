@@ -79,15 +79,16 @@ cli_generate_help(bool full)
 {
 	const char *fullmsg = ""
 		"asignify [global_opts] generate - generates a keypair\n\n"
-		"Usage: asignify generate [-n] [-r <rounds>] [-s <sshkey> ] <secretkey> [<publickey>]\n"
+		"Usage: asignify generate [-n] [-p] [-r <rounds>] [-s <sshkey> ] <secretkey> [<publickey>]\n"
 		"\t-n           Do not encrypt secret key\n"
+		"\t-p           Regenerate the public key for the specified secretkey\n"
 		"\t-r           Specify number of PBKDF rounds for secret key\n"
 		"\t-s <sshkey>  Convert the specified ssh secret key to native secret key\n"
 		"\tsecretkey    Path to a secret key\n"
 		"\tpubkey       Path to a public key (default: <secretkey>.pub)\n";
 
 	if (!full) {
-		return ("generate [-n] [-r <rounds>] [-s <sshkey>] secretkey [publickey]");
+		return ("generate [-n] [-p] [-r <rounds>] [-s <sshkey>] secretkey [publickey]");
 	}
 
 	return (fullmsg);
@@ -99,17 +100,22 @@ cli_generate(int argc, char **argv)
 	int rounds = PBKDF_MINROUNDS * 10, ch;
 	char pubkeybuf[PATH_MAX];
 	const char *seckeyfile = NULL, *pubkeyfile = NULL, *sshkeyfile = NULL;
+	bool pubkey_only = false;
 	static struct option long_options[] = {
 		{"no-password",   no_argument,     0,  'n' },
+		{"pubkey-only",   no_argument,     0,  'p' },
 		{"rounds", 	required_argument, 0,  'r' },
 		{"ssh",     required_argument, 0,  's' },
 		{0,         0,                 0,  0 }
 	};
 
-	while ((ch = getopt_long(argc, argv, "nr:s:", long_options, NULL)) != -1) {
+	while ((ch = getopt_long(argc, argv, "npr:s:", long_options, NULL)) != -1) {
 		switch (ch) {
 		case 'n':
 			rounds = 0;
+			break;
+		case 'p':
+			pubkey_only = true;
 			break;
 		case 'r':
 			rounds = strtoul(optarg, NULL, 10);
@@ -125,6 +131,11 @@ cli_generate(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
+	if (pubkey_only && sshkeyfile) {
+		fprintf(stderr, "Invalid combination: -p and -s\n");
+		return (-1);
+	}
+
 	if (argc == 1) {
 		/* We have only a secret key specified */
 		seckeyfile = argv[0];
@@ -139,7 +150,18 @@ cli_generate(int argc, char **argv)
 		return (0);
 	}
 
-	if (sshkeyfile) {
+	if (pubkey_only) {
+		if (!asignify_generate_pubkey(seckeyfile, pubkeyfile,
+				read_password_verify, NULL)) {
+			fprintf(stderr, "Cannot regenerate public key\n");
+			return (-1);
+		}
+
+		if (!quiet) {
+			printf("Public key from %s has been saved in %s\n",
+					seckeyfile, pubkeyfile);
+		}
+	} else if (sshkeyfile) {
 		if (rounds > 0) {
 			if (!asignify_privkey_from_ssh(sshkeyfile, seckeyfile, 1, rounds,
 					read_password_verify, NULL)) {

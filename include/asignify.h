@@ -171,6 +171,17 @@ bool asignify_generate(const char *privkf, const char *pubkf,
 		asignify_password_cb password_cb, void *d);
 
 /**
+ * Regenerate public key for given private key
+ * @param privkf filename for private key
+ * @param pubkf filename for public key
+ * @param password_cb password callback
+ * @param d opaque data pointer for password
+ * @return true if pair has been written successfully
+ */
+bool asignify_generate_pubkey(const char *privkf, const char *pubkf,
+		asignify_password_cb password_cb, void *d);
+
+/**
  * Safely zero specified memory region
  * @param pnt pointer to zero
  * @param len size of region
