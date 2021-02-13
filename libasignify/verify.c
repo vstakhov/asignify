@@ -550,32 +550,34 @@ asignify_verify_free(asignify_verify_t *ctx)
 	struct asignify_file *f;
 	struct asignify_pubkey_chain *chain, *ctmp;
 
-	if (ctx) {
+	if (ctx == NULL)
+		return;
 
-		chain = ctx->pk_chain;
 
-		while (chain != NULL) {
-			asignify_public_data_free(chain->pk);
-			ctmp = chain;
-			chain = chain->next;
-			free(ctmp);
-		}
-
-		if (ctx->files) {
-			for (k = kh_begin(ctx->files); k != kh_end(ctx->files); ++k) {
-				if (kh_exist(ctx->files, k)) {
-					f = kh_value(ctx->files, k);
-					for(d = f->digests; d && (dtmp = d->next, 1); d = dtmp) {
-						free(d->digest);
-						free(d);
-					}
-					free(f->fname);
-					free(f);
-				}
-			}
-		}
-
-		kh_destroy(asignify_verify_hnode, ctx->files);
-		free(ctx);
+	chain = ctx->pk_chain;
+	while (chain != NULL) {
+		asignify_public_data_free(chain->pk);
+		ctmp = chain;
+		chain = chain->next;
+		free(ctmp);
 	}
+
+	if (ctx->files) {
+		for (k = kh_begin(ctx->files); k != kh_end(ctx->files); ++k) {
+			if (!kh_exist(ctx->files, k))
+				continue;
+			f = kh_value(ctx->files, k);
+
+			for (d = f->digests; d && (dtmp = d->next, 1); d = dtmp) {
+				free(d->digest);
+				free(d);
+			}
+
+			free(f->fname);
+			free(f);
+		}
+	}
+
+	kh_destroy(asignify_verify_hnode, ctx->files);
+	free(ctx);
 }
