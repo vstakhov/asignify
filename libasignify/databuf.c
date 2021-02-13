@@ -144,7 +144,7 @@ asignify_public_data_load(const char *buf, size_t buflen, const char *magic,
 	char *errstr;
 	const char *p = buf;
 	unsigned int version;
-	size_t remain = buflen, blen;
+	size_t blen;
 	struct asignify_public_data *res = NULL;
 
 	if (buflen <= magiclen || memcmp (buf, magic, magiclen) != 0) {
@@ -152,7 +152,6 @@ asignify_public_data_load(const char *buf, size_t buflen, const char *magic,
 	}
 
 	p += magiclen;
-	remain -= magiclen;
 
 	version = strtoul(p, &errstr, 10);
 	if (errstr == NULL || *errstr != ':'
