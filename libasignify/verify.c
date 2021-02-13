@@ -473,10 +473,11 @@ asignify_verify_file(asignify_verify_t *ctx, const char *checkf)
 {
 	khiter_t k;
 	struct stat st;
-	int fd, check;
+	int fd;
 	struct asignify_file *f;
 	struct asignify_file_digest *d;
 	unsigned char *calc_digest;
+	bool equiv, ret;
 
 	if (ctx == NULL || ctx->files == NULL) {
 		CTX_MAYBE_SET_ERR(ctx, ASIGNIFY_ERROR_MISUSE);
@@ -484,56 +485,50 @@ asignify_verify_file(asignify_verify_t *ctx, const char *checkf)
 	}
 
 	k = kh_get(asignify_verify_hnode, ctx->files, checkf);
-
-	if (k != kh_end(ctx->files)) {
-		fd = xopen(checkf, O_RDONLY, 0);
-
-		f = kh_value(ctx->files, k);
-
-		if (fstat(fd, &st) == -1 || S_ISDIR(st.st_mode)) {
-			close(fd);
-			ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
-			return (false);
-		}
-
-		if (f->size > 0 && f->size != st.st_size) {
-			ctx->error = xerr_string(ASIGNIFY_ERROR_VERIFY_SIZE);
-			close(fd);
-			return (false);
-		}
-
-		d = f->digests;
-		while (d) {
-			calc_digest = asignify_digest_fd(d->digest_type, fd);
-
-			if (calc_digest == NULL) {
-				close(fd);
-				ctx->error = xerr_string(ASIGNIFY_ERROR_SIZE);
-				return (false);
-			}
-			else {
-				check = memcmp(calc_digest, d->digest,
-					asignify_digest_len(d->digest_type));
-				free(calc_digest);
-
-				if (check != 0) {
-					ctx->error = xerr_string(ASIGNIFY_ERROR_VERIFY_DIGEST);
-					close(fd);
-					return (false);
-				}
-			}
-			d = d->next;
-		}
-
-		close(fd);
-
-		return (true);
-	}
-	else {
+	if (k == kh_end(ctx->files)) {
 		ctx->error = xerr_string(ASIGNIFY_ERROR_NO_DIGEST);
+		return (false);
 	}
 
-	return (false);
+	fd = xopen(checkf, O_RDONLY, 0);
+	ret = false;
+
+	f = kh_value(ctx->files, k);
+
+	if (fstat(fd, &st) == -1 || S_ISDIR(st.st_mode)) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+		goto cleanup;
+	}
+
+	if (f->size > 0 && f->size != st.st_size) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_VERIFY_SIZE);
+		goto cleanup;
+	}
+
+	d = f->digests;
+	while (d) {
+		calc_digest = asignify_digest_fd(d->digest_type, fd);
+
+		if (calc_digest == NULL) {
+			ctx->error = xerr_string(ASIGNIFY_ERROR_SIZE);
+			goto cleanup;
+		}
+
+		equiv = memcmp(calc_digest, d->digest,
+			asignify_digest_len(d->digest_type)) == 0;
+		free(calc_digest);
+
+		if (!equiv) {
+			ctx->error = xerr_string(ASIGNIFY_ERROR_VERIFY_DIGEST);
+			goto cleanup;
+		}
+		d = d->next;
+	}
+
+	ret = true;
+cleanup:
+	close(fd);
+	return (ret);
 }
 
 
