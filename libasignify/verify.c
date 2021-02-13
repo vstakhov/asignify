@@ -46,6 +46,24 @@
 KHASH_INIT(asignify_verify_hnode, const char *, struct asignify_file *, 1,
 	kh_str_hash_func, kh_str_hash_equal);
 
+#define	DMAP_ENTRY(litname, dtype)		\
+	{					\
+		.name = litname,		\
+		.type = dtype,			\
+		.namelen = sizeof(litname) - 1	\
+	}
+
+static const struct digest_map_entry {
+	const char			*name;
+	enum asignify_digest_type	 type;
+	size_t				 namelen;
+} digest_map[] = {
+	DMAP_ENTRY("sha512", ASIGNIFY_DIGEST_SHA512),
+	DMAP_ENTRY("sha256", ASIGNIFY_DIGEST_SHA256),
+	DMAP_ENTRY("blake2", ASIGNIFY_DIGEST_BLAKE2),
+	DMAP_ENTRY("size", ASIGNIFY_DIGEST_SIZE),
+};
+
 struct asignify_pubkey_chain {
 	struct asignify_public_data *pk;
 	struct asignify_pubkey_chain *next;
@@ -95,21 +113,16 @@ asignify_verify_load_sig(struct asignify_verify_ctx *ctx, FILE *f, size_t *len)
 enum asignify_digest_type
 asignify_digest_from_str(const char *data, ssize_t dlen)
 {
-	if (dlen == sizeof("SHA512") - 1) {
-		if (strncasecmp(data, "sha512", dlen) == 0) {
-			return (ASIGNIFY_DIGEST_SHA512);
-		}
-		else if (strncasecmp(data, "sha256", dlen) == 0) {
-			return (ASIGNIFY_DIGEST_SHA256);
-		}
-		else if (strncasecmp(data, "blake2", dlen) == 0) {
-			return (ASIGNIFY_DIGEST_BLAKE2);
-		}
-	}
-	else if (dlen == sizeof("SIZE") - 1) {
-		if (strncasecmp(data, "size", dlen) == 0) {
-			return (ASIGNIFY_DIGEST_SIZE);
-		}
+	const struct digest_map_entry *entry;
+
+	if (dlen <= 0)
+		return (ASIGNIFY_DIGEST_MAX);
+	for (size_t i = 0; i < nitems(digest_map); i++) {
+		entry = &digest_map[i];
+		if ((size_t)dlen != entry->namelen)
+			continue;
+		if (strncasecmp(data, entry->name, entry->namelen) == 0)
+			return (entry->type);
 	}
 
 	return (ASIGNIFY_DIGEST_MAX);
