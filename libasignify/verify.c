@@ -376,7 +376,7 @@ bool
 asignify_verify_load_pubkey(asignify_verify_t *ctx, const char *pubf)
 {
 	FILE *f;
-	bool ret = true;
+	bool ret = false;
 	struct asignify_public_data *pk;
 	struct asignify_pubkey_chain *chain;
 
@@ -387,21 +387,23 @@ asignify_verify_load_pubkey(asignify_verify_t *ctx, const char *pubf)
 	f = xfopen(pubf, "r");
 	if (f == NULL) {
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+		return (false);
 	}
-	else {
-		pk = asignify_pubkey_load(f);
-		if (pk == NULL) {
-			ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
-			ret = false;
-		}
-		else if (ret) {
-			chain = xmalloc(sizeof(*chain));
-			chain->pk = pk;
-			chain->next = ctx->pk_chain;
-			ctx->pk_chain = chain;
-		}
-		fclose(f);
+
+	pk = asignify_pubkey_load(f);
+	if (pk == NULL) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
+		goto cleanup;
 	}
+
+	ret = true;
+	chain = xmalloc(sizeof(*chain));
+	chain->pk = pk;
+	chain->next = ctx->pk_chain;
+	ctx->pk_chain = chain;
+
+cleanup:
+	fclose(f);
 
 	return (ret);
 }
