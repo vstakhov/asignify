@@ -404,48 +404,48 @@ asignify_verify_load_signature(asignify_verify_t *ctx, const char *sigf)
 		return (false);
 	}
 
+	sig = NULL;
+	data = NULL;
 	f = xfopen(sigf, "r");
 	if (f == NULL) {
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+		return (false);
 	}
-	else {
-		/* XXX: we assume that all pk in chain are the same */
-		sig = asignify_signature_load(f, ctx->pk_chain->pk);
-		if (ctx->pk_chain == NULL) {
-			ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
-		}
-		else {
-			data = asignify_verify_load_sig(ctx, f, &dlen);
-			if (data == NULL || dlen == 0) {
-				fclose(f);
-				return (false);
-			}
 
-			chain = ctx->pk_chain;
-			while (chain != NULL && !ret) {
-				ret = asignify_pubkey_check_signature(chain->pk, sig, data, dlen);
-				chain = chain->next;
-			}
-			if (!ret) {
-				asignify_public_data_free(sig);
-				free(data);
-				ctx->error = xerr_string(ASIGNIFY_ERROR_VERIFY);
-				fclose(f);
-				return (false);
-			}
+	/* XXX: we assume that all pk in chain are the same */
+	sig = asignify_signature_load(f, ctx->pk_chain->pk);
+	if (ctx->pk_chain == NULL) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
+		goto cleanup;
+	}
 
-			/* We are now safe to parse digests */
-			asignify_public_data_free(sig);
-			ctx->files = kh_init(asignify_verify_hnode);
+	data = asignify_verify_load_sig(ctx, f, &dlen);
+	if (data == NULL || dlen == 0) {
+		/* XXX set ctx->error */
+		goto cleanup;
+	}
 
-			if (asignify_verify_parse_files(ctx, (const char *)data, dlen)) {
-				ret = true;
-			}
-			free(data);
-		}
+	chain = ctx->pk_chain;
+	while (chain != NULL && !ret) {
+		ret = asignify_pubkey_check_signature(chain->pk, sig, data, dlen);
+		chain = chain->next;
+	}
+
+	if (!ret) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_VERIFY);
+		goto cleanup;
+	}
+
+	/* We are now safe to parse digests */
+	ctx->files = kh_init(asignify_verify_hnode);
+
+	ret = asignify_verify_parse_files(ctx, (const char *)data, dlen);
+
+cleanup:
+	asignify_public_data_free(sig);
+	free(data);
+	if (f != NULL)
 		fclose(f);
-	}
-
 	return (ret);
 }
 
