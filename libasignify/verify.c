@@ -201,8 +201,6 @@ asignify_verify_parse_files(struct asignify_verify_ctx *ctx, const char *data,
 		PARSE_EQSIGN,
 		PARSE_HASH,
 		PARSE_SPACES,
-		PARSE_ERROR,
-		PARSE_FINISH
 	} state = PARSE_START, next_state = PARSE_START;
 	const unsigned char *p, *end, *c;
 	char *fbuf;
@@ -220,7 +218,7 @@ asignify_verify_parse_files(struct asignify_verify_ctx *ctx, const char *data,
 		case PARSE_START:
 			cur_file = NULL;
 			if (*p == '\0') {
-				state = PARSE_FINISH;
+				goto finished;
 			}
 			else if (isspace(*p)) {
 				next_state = PARSE_START;
@@ -236,90 +234,81 @@ asignify_verify_parse_files(struct asignify_verify_ctx *ctx, const char *data,
 			if (isgraph(*p)) {
 				p ++;
 			}
+			else if (*p == ' ') {
+				/* Check algorithm */
+				dig_type = asignify_digest_from_str((const char *)c, p - c);
+				if (dig_type == ASIGNIFY_DIGEST_MAX) {
+					goto parse_error;
+				}
+
+				state = PARSE_SPACES;
+				next_state = PARSE_OBRACE;
+			}
 			else {
-				if (*p == ' ') {
-					/* Check algorithm */
-					dig_type = asignify_digest_from_str((const char *)c, p - c);
-					if (dig_type == ASIGNIFY_DIGEST_MAX) {
-						state = PARSE_ERROR;
-					}
-					else {
-						state = PARSE_SPACES;
-						next_state = PARSE_OBRACE;
-					}
-				}
-				else {
-					state = PARSE_ERROR;
-				}
+				goto parse_error;
 			}
 			break;
 		case PARSE_OBRACE:
-			if (*p == '(') {
-				p++;
-				c = p;
-				state = PARSE_FILE;
+			if (*p != '(') {
+				goto parse_error;
 			}
-			else {
-				state = PARSE_ERROR;
-			}
+
+			p++;
+			c = p;
+			state = PARSE_FILE;
 			break;
 		case PARSE_FILE:
 			if (isgraph(*p) && *p != ')') {
 				p ++;
 			}
-			else {
-				if (*p == ')') {
-					/* Check file */
-					if (p - c > 0) {
+			else if (*p == ')') {
+				/* Check file */
+				if (p - c > 0) {
 
-						fbuf = xmalloc(p - c + 1);
-						memcpy(fbuf, c, p - c);
-						fbuf[p - c] = '\0';
-						k = kh_get(asignify_verify_hnode, ctx->files, fbuf);
+					fbuf = xmalloc(p - c + 1);
+					memcpy(fbuf, c, p - c);
+					fbuf[p - c] = '\0';
+					k = kh_get(asignify_verify_hnode, ctx->files, fbuf);
 
-						if (k != kh_end(ctx->files)) {
-							/* We already have the node */
-							free(fbuf);
-							fbuf = NULL;
-							cur_file = kh_value(ctx->files, k);
-						}
-						else {
-							cur_file = xmalloc0(sizeof(*cur_file));
-							cur_file->fname = fbuf;
-							k = kh_put(asignify_verify_hnode, ctx->files,
-								cur_file->fname, &r);
-							fbuf = NULL;
-
-							if (r == -1) {
-								state = PARSE_ERROR;
-							}
-							else {
-								kh_value(ctx->files, k) = cur_file;
-							}
-						}
-						if (state != PARSE_ERROR) {
-							p ++;
-							c = p;
-							next_state = PARSE_EQSIGN;
-							state = PARSE_SPACES;
-						}
+					if (k != kh_end(ctx->files)) {
+						/* We already have the node */
+						free(fbuf);
+						fbuf = NULL;
+						cur_file = kh_value(ctx->files, k);
 					}
 					else {
-						state = PARSE_ERROR;
+						cur_file = xmalloc0(sizeof(*cur_file));
+						cur_file->fname = fbuf;
+						k = kh_put(asignify_verify_hnode, ctx->files,
+							cur_file->fname, &r);
+						fbuf = NULL;
+
+						if (r == -1) {
+							goto parse_error;
+						}
+
+						kh_value(ctx->files, k) = cur_file;
 					}
+
+					p ++;
+					c = p;
+					next_state = PARSE_EQSIGN;
+					state = PARSE_SPACES;
+				}
+				else {
+					goto parse_error;
 				}
 			}
 			break;
 		case PARSE_EQSIGN:
-			if (*p == '=') {
-				p++;
-				c = p;
-				state = PARSE_SPACES;
-				next_state = PARSE_HASH;
+			if (*p != '=') {
+				goto parse_error;
 			}
-			else {
-				state = PARSE_ERROR;
-			}
+
+			p++;
+			c = p;
+			state = PARSE_SPACES;
+			next_state = PARSE_HASH;
 			break;
 		case PARSE_HASH:
 			if (isxdigit(*p)) {
@@ -328,11 +317,10 @@ asignify_verify_parse_files(struct asignify_verify_ctx *ctx, const char *data,
 			else if (*p == '\n' || *p == '\0') {
 				if (!asignify_verify_parse_digest((const char *)c, p - c,
 						dig_type, cur_file)) {
-					state = PARSE_ERROR;
+					goto parse_error;
 				}
-				else {
-					state = PARSE_START;
-				}
+
+				state = PARSE_START;
 			}
 			break;
 		case PARSE_SPACES:
@@ -344,21 +332,18 @@ asignify_verify_parse_files(struct asignify_verify_ctx *ctx, const char *data,
 				state = next_state;
 			}
 			break;
-
-		case PARSE_FINISH:
-			/* All done */
-			return (true);
-			break;
-
-		case PARSE_ERROR:
-		default:
-			ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
-			return (false);
-			break;
 		}
 	}
 
+parse_error:
+	ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
 	return (false);
+
+finished:
+	if (p != end) {
+		goto parse_error;
+	}
+	return (true);
 }
 
 asignify_verify_t*
