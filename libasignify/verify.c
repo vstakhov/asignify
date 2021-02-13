@@ -64,6 +64,13 @@ static const struct digest_map_entry {
 	DMAP_ENTRY("size", ASIGNIFY_DIGEST_SIZE),
 };
 
+static const unsigned int digests_sizes[ASIGNIFY_DIGEST_MAX] = {
+	[ASIGNIFY_DIGEST_SHA512] = SHA512_DIGEST_STRING_LENGTH - 1,
+	[ASIGNIFY_DIGEST_SHA256] = SHA256_DIGEST_STRING_LENGTH - 1,
+	[ASIGNIFY_DIGEST_BLAKE2] = BLAKE2B_OUTBYTES * 2,
+	[ASIGNIFY_DIGEST_SIZE] = 0
+};
+
 struct asignify_pubkey_chain {
 	struct asignify_public_data *pk;
 	struct asignify_pubkey_chain *next;
@@ -132,12 +139,6 @@ static bool
 asignify_verify_parse_digest(const char *data, ssize_t dlen,
 	enum asignify_digest_type type, struct asignify_file *f)
 {
-	const unsigned int digests_sizes[ASIGNIFY_DIGEST_MAX] = {
-		[ASIGNIFY_DIGEST_SHA512] = SHA512_DIGEST_STRING_LENGTH - 1,
-		[ASIGNIFY_DIGEST_SHA256] = SHA256_DIGEST_STRING_LENGTH - 1,
-		[ASIGNIFY_DIGEST_BLAKE2] = BLAKE2B_OUTBYTES * 2,
-		[ASIGNIFY_DIGEST_SIZE] = 0
-	};
 	char *errstr;
 	uint64_t flen;
 	struct asignify_file_digest *dig;
