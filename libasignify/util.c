@@ -453,6 +453,24 @@ asignify_digest_init(enum asignify_digest_type type)
 }
 
 static void
+asignify_digest_free(enum asignify_digest_type type, void *res)
+{
+
+	switch (type) {
+	case ASIGNIFY_DIGEST_BLAKE2:
+		free(res);
+		break;
+	default:
+#ifdef HAVE_OPENSSL
+		EVP_MD_CTX_free(res);
+#else
+		free(res);
+#endif
+		break;
+	}
+}
+
+static void
 asignify_digest_update(enum asignify_digest_type type, void *ctx,
 	const unsigned char *buf, size_t len)
 {
@@ -511,34 +529,30 @@ asignify_digest_final(enum asignify_digest_type type, void *ctx)
 #ifdef HAVE_OPENSSL
 			mdctx = (EVP_MD_CTX *)ctx;
 			EVP_DigestFinal(mdctx, res, &len);
-			EVP_MD_CTX_destroy(mdctx);
 #else
 			st = (SHA2_CTX *)ctx;
 			SHA512Final(res, st);
-			free(st);
 #endif
 			break;
 		case ASIGNIFY_DIGEST_SHA256:
 #ifdef HAVE_OPENSSL
 			mdctx = (EVP_MD_CTX *)ctx;
 			EVP_DigestFinal(mdctx, res, &len);
-			EVP_MD_CTX_destroy(mdctx);
 #else
 			st = (SHA2_CTX *)ctx;
 			SHA256Final(res, st);
-			free(st);
 #endif
 			break;
 		case ASIGNIFY_DIGEST_BLAKE2:
 			bst = (blake2b_state *)ctx;
 			blake2b_final(bst, res, len);
-			free(bst);
 			break;
 		default:
 			abort();
 			break;
 	}
 
+	asignify_digest_free(type, ctx);
 	return (res);
 }
 
@@ -560,8 +574,7 @@ asignify_digest_fd(enum asignify_digest_type type, int fd)
 	}
 
 	if (lseek(fd, 0, SEEK_SET) == (off_t)-1) {
-		/* XXX: not correct if openssl is used */
-		free(dgst);
+		asignify_digest_free(type, dgst);
 		return (NULL);
 	}
 
