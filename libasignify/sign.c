@@ -75,17 +75,18 @@ asignify_sign_load_privkey(asignify_sign_t *ctx, const char *privf,
 	f = xfopen(privf, "r");
 	if (f == NULL) {
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+		return (false);
 	}
-	else {
-		ctx->privk = asignify_private_data_load(f, &error, password_cb, d);
-		if (ctx->privk == NULL) {
-			ctx->error = xerr_string(error);
-		}
-		else {
-			ret = true;
-		}
-		fclose(f);
+
+	ctx->privk = asignify_private_data_load(f, &error, password_cb, d);
+	if (ctx->privk == NULL) {
+		ctx->error = xerr_string(error);
+		goto cleanup;
 	}
+
+	ret = true;
+cleanup:
+	fclose(f);
 
 	return (ret);
 }
@@ -175,8 +176,7 @@ asignify_sign_write_signature(asignify_sign_t *ctx, const char *sigf)
 				f->size);
 			if (r >= sizeof(line)) {
 				ctx->error = xerr_string(ASIGNIFY_ERROR_SIZE);
-				kv_destroy(out);
-				return (false);
+				goto cleanup;
 			}
 		}
 		else {
@@ -188,8 +188,7 @@ asignify_sign_write_signature(asignify_sign_t *ctx, const char *sigf)
 				hex);
 			if (r >= sizeof(line)) {
 				ctx->error = xerr_string(ASIGNIFY_ERROR_SIZE);
-				kv_destroy(out);
-				return (false);
+				goto cleanup;
 			}
 		}
 		kv_push_a(char, out, line, r);
@@ -198,22 +197,22 @@ asignify_sign_write_signature(asignify_sign_t *ctx, const char *sigf)
 	sig = asignify_private_data_sign(ctx->privk, (unsigned char *)out.a,
 		kv_size(out));
 
-	if (sig != NULL) {
-		outf = xfopen(sigf, "w");
-
-		if (outf == NULL) {
-			ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
-		}
-		else {
-			ret = asignify_signature_write(sig, out.a + sizeof(sig_pad),
-				kv_size(out) - sizeof(sig_pad), outf);
-		}
-		fclose(outf);
-	}
-	else {
+	if (sig == NULL) {
 		ctx->error = xerr_string(ASIGNIFY_ERROR_MISUSE);
+		goto cleanup;
 	}
 
+	outf = xfopen(sigf, "w");
+	if (outf == NULL) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+		goto cleanup;
+	}
+
+	ret = asignify_signature_write(sig, out.a + sizeof(sig_pad),
+		kv_size(out) - sizeof(sig_pad), outf);
+	fclose(outf);
+
+cleanup:
 	kv_destroy(out);
 
 	return (ret);
