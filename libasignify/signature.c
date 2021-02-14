@@ -106,11 +106,6 @@ asignify_signature_load(FILE *f, struct asignify_public_data *pk)
 					pk->id_len, SIG_LEN);
 				break;
 			}
-			else {
-				if (!asignify_sig_try_obsd(buf, r, &res)) {
-					break;
-				}
-			}
 		}
 		if (!asignify_sig_try_obsd(buf, r, &res)) {
 			break;
