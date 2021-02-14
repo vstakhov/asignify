@@ -49,6 +49,7 @@ asignify_encrypt_privkey(struct asignify_private_key *privk, unsigned int rounds
 	unsigned char xorkey[crypto_sign_SECRETKEYBYTES];
 	char password[1024];
 	int r;
+	bool ret = false;
 
 	privk->checksum = xmalloc(BLAKE2B_OUTBYTES);
 	privk->salt = xmalloc(SALT_LEN);
@@ -64,12 +65,12 @@ asignify_encrypt_privkey(struct asignify_private_key *privk, unsigned int rounds
 	r = password_cb(password, sizeof(password) - sizeof(canary), d);
 	if (r <= 0 || r > sizeof(password) - sizeof(canary) ||
 			memcmp(password + sizeof(password) - sizeof(canary), canary, sizeof(canary)) != 0) {
-		return (false);
+		goto cleanup;
 	}
 
 	if (pkcs5_pbkdf2(password, r, privk->salt, SALT_LEN, xorkey, sizeof(xorkey),
 			privk->rounds) == -1) {
-		return (false);
+		goto cleanup;
 	}
 
 	explicit_memzero(password, sizeof(password));
@@ -79,8 +80,15 @@ asignify_encrypt_privkey(struct asignify_private_key *privk, unsigned int rounds
 	}
 
 	explicit_memzero(xorkey, sizeof(xorkey));
-
-	return (true);
+	ret = true;
+cleanup:
+	if (!ret) {
+		free(privk->salt);
+		privk->salt = NULL;
+		free(privk->checksum);
+		privk->checksum = NULL;
+	}
+	return (ret);
 }
 
 static bool
@@ -90,7 +98,7 @@ asignify_generate_v1(FILE *privf, FILE *pubf, unsigned int rounds,
 
 	struct asignify_private_key *privk;
 	struct asignify_public_data *pubk;
-	bool ret = true;
+	bool ret = false;
 
 	if (privf == NULL || pubf == NULL ||
 			(password_cb != NULL && rounds < PBKDF_MINROUNDS)) {
@@ -101,16 +109,17 @@ asignify_generate_v1(FILE *privf, FILE *pubf, unsigned int rounds,
 	pubk = xmalloc0(sizeof(*pubk));
 
 	privk->version = 1;
-	pubk->version = 1;
 	privk->id = xmalloc(KEY_ID_LEN);
-	pubk->id = xmalloc(KEY_ID_LEN);
-	pubk->id_len = KEY_ID_LEN;
 	randombytes(privk->id, KEY_ID_LEN);
+
+	pubk->version = 1;
+	pubk->data_len = crypto_sign_PUBLICKEYBYTES;
+	pubk->id_len = KEY_ID_LEN;
+	asignify_alloc_public_data_fields(pubk);
+
 	memcpy(pubk->id, privk->id, KEY_ID_LEN);
 
 	privk->encrypted_blob = xmalloc(crypto_sign_SECRETKEYBYTES);
-	pubk->data = xmalloc(crypto_sign_PUBLICKEYBYTES);
-	pubk->data_len = crypto_sign_PUBLICKEYBYTES;
 	crypto_sign_keypair(pubk->data, privk->encrypted_blob);
 
 	if (password_cb != NULL) {
@@ -126,14 +135,11 @@ asignify_generate_v1(FILE *privf, FILE *pubf, unsigned int rounds,
 
 cleanup:
 	asignify_public_data_free(pubk);
+
 	explicit_memzero(privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
-
-	free(privk->salt);
-	free(privk->checksum);
 	free(privk->encrypted_blob);
-
-	fclose(pubf);
-	fclose(privf);
+	free(privk->id);
+	free(privk);
 
 	return (ret);
 }
@@ -181,31 +187,31 @@ bool
 asignify_privkey_write(struct asignify_private_key *privk, FILE *f)
 {
 	char *hexdata;
-	bool ret = false;
 
 	if (privk == NULL || f == NULL) {
 		return (false);
 	}
 
-	if (privk->version == 1) {
-		fprintf(f, PRIVKEY_MAGIC "\n" "version: %u\n", privk->version);
-		HEX_OUT_PRIVK(privk, encrypted_blob, "data", crypto_sign_SECRETKEYBYTES, f);
-
-		if (privk->id) {
-			HEX_OUT_PRIVK(privk, id, "id", KEY_ID_LEN, f);
-		}
-
-		/* Encrypted privkey */
-		if (privk->pbkdf_alg != NULL) {
-			fprintf(f, "kdf: %s\n", privk->pbkdf_alg);
-			fprintf(f, "rounds: %u\n", privk->rounds);
-			HEX_OUT_PRIVK(privk, salt, "salt", SALT_LEN, f);
-			HEX_OUT_PRIVK(privk, checksum, "checksum", BLAKE2B_OUTBYTES, f);
-		}
-		ret = true;
+	if (privk->version != 1) {
+		return (false);
 	}
 
-	return (ret);
+	fprintf(f, PRIVKEY_MAGIC "\n" "version: %u\n", privk->version);
+	HEX_OUT_PRIVK(privk, encrypted_blob, "data", crypto_sign_SECRETKEYBYTES, f);
+
+	if (privk->id) {
+		HEX_OUT_PRIVK(privk, id, "id", KEY_ID_LEN, f);
+	}
+
+	/* Encrypted privkey */
+	if (privk->pbkdf_alg != NULL) {
+		fprintf(f, "kdf: %s\n", privk->pbkdf_alg);
+		fprintf(f, "rounds: %u\n", privk->rounds);
+		HEX_OUT_PRIVK(privk, salt, "salt", SALT_LEN, f);
+		HEX_OUT_PRIVK(privk, checksum, "checksum", BLAKE2B_OUTBYTES, f);
+	}
+
+	return (true);
 }
 
 bool
@@ -213,20 +219,25 @@ asignify_generate(const char *privkf, const char *pubkf, unsigned int version,
 		unsigned int rounds, asignify_password_cb password_cb, void *d)
 {
 	FILE *privf, *pubf;
+	bool ret = false;
 
+	if (version != 1)
+		return (false);
 
-	if (version == 1) {
-		privf = xfopen(privkf, "w");
-		pubf = xfopen(pubkf, "w");
+	privf = xfopen(privkf, "w");
+	pubf = xfopen(pubkf, "w");
 
-		if (!privf || !pubf) {
-			return (false);
-		}
-
-		return (asignify_generate_v1(privf, pubf, rounds, password_cb, d));
+	if (!privf || !pubf) {
+		goto cleanup;
 	}
 
-	return (false);
+	ret = asignify_generate_v1(privf, pubf, rounds, password_cb, d);
+cleanup:
+	if (pubf != NULL)
+		fclose(pubf);
+	if (privf != NULL)
+		fclose(privf);
+	return (ret);
 }
 
 bool
@@ -268,41 +279,45 @@ asignify_privkey_from_ssh(const char *sshkf, const char *privkf,
 	struct asignify_private_key privk;
 	bool ret = false;
 
-	if (version == 1) {
-		sshf = xfopen(sshkf, "r");
+	if (version != 1)
+		return (false);
 
-		if (!sshf) {
-			return (false);
-		}
+	privf = NULL;
+	sshf = xfopen(sshkf, "r");
 
-		privd = asignify_ssh_privkey_load(sshf, NULL);
-
-		if (privd == NULL) {
-			return (false);
-		}
-
-		privf = xfopen(privkf, "w");
-		if (privf == NULL) {
-			asignify_private_data_free(privd);
-			return (false);
-		}
-
-		memset(&privk, 0, sizeof(privk));
-		privk.encrypted_blob = privd->data;
-		privk.version = version;
-		privk.id = NULL;
-
-		if (password_cb != NULL) {
-			if (!asignify_encrypt_privkey(&privk, rounds, password_cb, d)) {
-				asignify_private_data_free(privd);
-				return (false);
-			}
-		}
-
-		ret = asignify_privkey_write(&privk, privf);
+	if (!sshf) {
+		return (false);
 	}
 
+	privd = asignify_ssh_privkey_load(sshf, NULL);
+	if (privd == NULL) {
+		goto cleanup;
+	}
+
+	privf = xfopen(privkf, "w");
+	if (privf == NULL) {
+		goto cleanup;
+	}
+
+	memset(&privk, 0, sizeof(privk));
+	privk.encrypted_blob = privd->data;
+	privk.version = version;
+	privk.id = NULL;
+
+	if (password_cb != NULL) {
+		if (!asignify_encrypt_privkey(&privk, rounds, password_cb, d)) {
+			goto cleanup;
+		}
+	}
+
+	ret = asignify_privkey_write(&privk, privf);
+
+cleanup:
 	asignify_private_data_free(privd);
+	if (sshf != NULL)
+		fclose(sshf);
+	if (privf != NULL)
+		fclose(privf);
 
 	return (ret);
 }
