@@ -93,27 +93,27 @@ asignify_signature_load(FILE *f, struct asignify_public_data *pk)
 	char *buf = NULL;
 	size_t buflen = 0;
 	ssize_t r;
-	bool first = true;
 
 	if (f == NULL) {
 		abort();
 	}
 
-	while ((r = getline(&buf, &buflen, f)) != -1) {
-		if (first && r > sizeof(SIG_MAGIC)) {
-			first = false;
+	if ((r = getline(&buf, &buflen, f)) == -1) {
+		return (NULL);
+	}
 
-			if (memcmp(buf, SIG_MAGIC, sizeof(SIG_MAGIC) - 1) == 0) {
-				res = asignify_public_data_load(buf, r,
-					SIG_MAGIC, sizeof(SIG_MAGIC) - 1,
-					SIG_VER_MAX, SIG_VER_MAX,
-					pk->id_len, SIG_LEN);
-				break;
-			}
-		}
-		if (!asignify_sig_try_obsd(buf, r, &res)) {
-			break;
-		}
+	if (r > sizeof(SIG_MAGIC) && memcmp(buf, SIG_MAGIC, sizeof(SIG_MAGIC) - 1) == 0) {
+		return (asignify_public_data_load(buf, r,
+			SIG_MAGIC, sizeof(SIG_MAGIC) - 1,
+			SIG_VER_MAX, SIG_VER_MAX,
+			pk->id_len, SIG_LEN));
+	} else if (!asignify_sig_try_obsd(buf, r, &res)) {
+		return (res);
+	}
+
+	while ((r = getline(&buf, &buflen, f)) != -1 &&
+		asignify_sig_try_obsd(buf, r, &res)) {
+		/* More lines, please. */
 	}
 
 	return (res);

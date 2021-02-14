@@ -486,33 +486,30 @@ asignify_private_data_load(FILE *f, int *error,
 	size_t buflen = 0;
 	struct asignify_private_data *pkeyd;
 	struct asignify_private_key privk;
-	bool first = true;
 	ssize_t r;
 
 	memset(&privk, 0, sizeof(privk));
 	pkeyd = NULL;
 
+	if ((r = getline(&buf, &buflen, f)) == -1) {
+		return (NULL);
+	}
+
+	if (r < sizeof(PRIVKEY_MAGIC) - 1 ||
+		memcmp(buf, PRIVKEY_MAGIC, sizeof(PRIVKEY_MAGIC) - 1) != 0) {
+		return (NULL);
+	}
+
 	while ((r = getline(&buf, &buflen, f)) != -1) {
-		if (first) {
-			/* Check magic */
-			if (memcmp(buf, PRIVKEY_MAGIC, sizeof(PRIVKEY_MAGIC) - 1) != 0) {
-				return (NULL);
-			}
-
-			first = false;
-			continue;
-		}
-
 		if (!asignify_private_data_parse_line(buf, r, &privk)) {
 			goto cleanup;
 		}
 	}
 
-	if (!asignify_private_key_is_sane(&privk)) {
-		goto cleanup;
+	if (asignify_private_key_is_sane(&privk)) {
+		pkeyd = asignify_private_data_unpack_key(&privk, error, password_cb, d);
 	}
 
-	pkeyd = asignify_private_data_unpack_key(&privk, error, password_cb, d);
 cleanup:
 	asignify_privkey_cleanup(&privk);
 	return (pkeyd);
