@@ -64,20 +64,24 @@ asignify_sig_try_obsd(const char *buf, size_t buflen,
 		return (true);
 	}
 
-	if (b64_pton(buf, (unsigned char *)&osig, sizeof(osig)) == sizeof(osig)) {
-		if (memcmp(osig.sigalg, OBSD_SIGALG, sizeof(osig.sigalg)) == 0) {
-			res = xmalloc0(sizeof(*res));
-			/* OpenBSD version code */
-			res->version = 0;
-			res->data_len = sizeof(osig.sig);
-			res->id_len = sizeof(osig.keynum);
-			asignify_alloc_public_data_fields(res);
-			memcpy(res->data, osig.sig, res->data_len);
-			memcpy(res->id, osig.keynum, res->id_len);
-
-			*sig = res;
-		}
+	if (b64_pton(buf, (unsigned char *)&osig, sizeof(osig)) != sizeof(osig)) {
+		return (false);
 	}
+
+	if (memcmp(osig.sigalg, OBSD_SIGALG, sizeof(osig.sigalg)) != 0) {
+		return (false);
+	}
+
+	res = xmalloc0(sizeof(*res));
+	/* OpenBSD version code */
+	res->version = 0;
+	res->data_len = sizeof(osig.sig);
+	res->id_len = sizeof(osig.keynum);
+	asignify_alloc_public_data_fields(res);
+	memcpy(res->data, osig.sig, res->data_len);
+	memcpy(res->id, osig.keynum, res->id_len);
+
+	*sig = res;
 
 	return (false);
 }
@@ -119,25 +123,26 @@ struct asignify_public_data*
 asignify_private_data_sign(struct asignify_private_data *privk,
 	unsigned char *buf, size_t len)
 {
-	struct asignify_public_data *res = NULL;
+	struct asignify_public_data *res;
 	unsigned long long outlen = len;
 
-	if (buf != NULL && len > 0 && privk != NULL) {
-		res = xmalloc0(sizeof(*res));
-		res->version = privk->version;
-		res->id_len = privk->id_len;
-		res->data_len = crypto_sign_BYTES;
+	if (buf == NULL || privk == NULL || len == 0)
+		return (NULL);
 
-		asignify_alloc_public_data_fields(res);
+	res = xmalloc0(sizeof(*res));
+	res->version = privk->version;
+	res->id_len = privk->id_len;
+	res->data_len = crypto_sign_BYTES;
 
-		if (privk->id_len > 0) {
-			memcpy(res->id, privk->id, res->id_len);
-		}
+	asignify_alloc_public_data_fields(res);
 
-		crypto_sign(buf, &outlen, buf + crypto_sign_BYTES, len - crypto_sign_BYTES,
-			privk->data);
-		memcpy(res->data, buf, res->data_len);
+	if (privk->id_len > 0) {
+		memcpy(res->id, privk->id, res->id_len);
 	}
+
+	crypto_sign(buf, &outlen, buf + crypto_sign_BYTES, len - crypto_sign_BYTES,
+		privk->data);
+	memcpy(res->data, buf, res->data_len);
 
 	return (res);
 }
@@ -153,26 +158,30 @@ asignify_signature_write(struct asignify_public_data *sig, const void *buf,
 		return (false);
 	}
 
-	if (sig->version == 1) {
-		if (sig->id_len > 0) {
-			b64id = xmalloc(sig->id_len * 2);
-			b64_ntop(sig->id, sig->id_len, b64id, sig->id_len * 2);
-		}
-		b64data = xmalloc(sig->data_len * 2);
-		b64_ntop(sig->data, sig->data_len, b64data, sig->data_len * 2);
-
-		if (b64id != NULL) {
-			ret = (fprintf(f, "%s1:%s:%s\n", SIG_MAGIC, b64id, b64data) > 0);
-			free(b64id);
-		}
-		else {
-			ret = (fprintf(f, "%s1::%s\n", SIG_MAGIC, b64data) > 0);
-		}
-		free(b64data);
-	}
-	else if (sig->version == 0) {
+	if (sig->version == 0) {
 		/* XXX: support openbsd signatures format */
+		return (false);
+	} else if (sig->version != 1) {
+		/* Future formats. */
+		return (false);
 	}
+
+	if (sig->id_len > 0) {
+		b64id = xmalloc(sig->id_len * 2);
+		b64_ntop(sig->id, sig->id_len, b64id, sig->id_len * 2);
+	}
+
+	b64data = xmalloc(sig->data_len * 2);
+	b64_ntop(sig->data, sig->data_len, b64data, sig->data_len * 2);
+
+	if (b64id != NULL) {
+		ret = (fprintf(f, "%s1:%s:%s\n", SIG_MAGIC, b64id, b64data) > 0);
+		free(b64id);
+	}
+	else {
+		ret = (fprintf(f, "%s1::%s\n", SIG_MAGIC, b64data) > 0);
+	}
+	free(b64data);
 
 	if (ret) {
 		ret = (fwrite(buf, len, 1, f) > 0);
