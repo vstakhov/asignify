@@ -161,7 +161,7 @@ void asignify_sign_free(asignify_sign_t *ctx);
  * @param privkf filename for private key
  * @param pubkf filename for public key
  * @param version version of pair
- * @param rounds rounds of PBKDF
+ * @param rounds rounds of PBKDF (if 0 then private key is not encrypted)
  * @param password_cb password callback (if NULL then private key is not encrypted)
  * @param d opaque data pointer for password
  * @return true if pair has been written successfully
