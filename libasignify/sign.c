@@ -99,6 +99,7 @@ asignify_sign_add_file(asignify_sign_t *ctx, const char *f,
 	unsigned char *calc_digest;
 	struct asignify_file check_file;
 	struct asignify_file_digest *dig;
+	bool ret;
 
 	if (ctx == NULL || f == NULL || dt >= ASIGNIFY_DIGEST_MAX) {
 		CTX_MAYBE_SET_ERR(ctx, ASIGNIFY_ERROR_MISUSE);
@@ -111,6 +112,7 @@ asignify_sign_add_file(asignify_sign_t *ctx, const char *f,
 		return (false);
 	}
 
+	ret = false;
 	check_file.fname = xstrdup(f);
 
 	if (dt == ASIGNIFY_DIGEST_SIZE) {
@@ -122,21 +124,23 @@ asignify_sign_add_file(asignify_sign_t *ctx, const char *f,
 		calc_digest = asignify_digest_fd(dt, fd);
 
 		if (calc_digest == NULL) {
-			close(fd);
 			ctx->error = xerr_string(ASIGNIFY_ERROR_SIZE);
-			return (false);
+			goto cleanup;
 		}
+
 		dig = xmalloc0(sizeof(*dig));
 		dig->digest_type = dt;
 		dig->digest = calc_digest;
 		check_file.size = 0;
 		check_file.digests = dig;
-		close(fd);
 	}
 
+	ret = true;
 	kv_push(struct asignify_file, ctx->files, check_file);
+cleanup:
+	close(fd);
 
-	return (true);
+	return (ret);
 }
 
 bool
