@@ -466,7 +466,6 @@ asignify_private_data_unpack_key(struct asignify_private_key *privk, int *error,
 			sizeof(xorkey), 0);
 
 		if (memcmp(res_checksum, privk->checksum, sizeof(res_checksum)) != 0) {
-			explicit_memzero(privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
 			asignify_privkey_cleanup(privk);
 			free(priv);
 
