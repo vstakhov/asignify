@@ -79,16 +79,18 @@ asignify_encrypt_load_privkey(asignify_encrypt_t *ctx, const char *privf,
 	f = xfopen(privf, "r");
 	if (f == NULL) {
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
+		return (false);
 	}
-	else {
-		ctx->privk = asignify_private_data_load(f, &error, password_cb, d);
-		if (ctx->privk == NULL) {
-			ctx->error = xerr_string(error);
-		}
-		else {
-			ret = true;
-		}
+
+	ctx->privk = asignify_private_data_load(f, &error, password_cb, d);
+	if (ctx->privk == NULL) {
+		ctx->error = xerr_string(error);
+		goto cleanup;
 	}
+
+	ret = true;
+cleanup:
+	fclose(f);
 
 	return (ret);
 }
@@ -106,17 +108,18 @@ asignify_encrypt_load_pubkey(asignify_encrypt_t *ctx, const char *pubf)
 	f = xfopen(pubf, "r");
 	if (f == NULL) {
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
-	}
-	else {
-		ctx->pubk = asignify_pubkey_load(f);
-		if (ctx->pubk == NULL) {
-			ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
-		}
-		else {
-			ret = true;
-		}
+		return (false);
 	}
 
+	ctx->pubk = asignify_pubkey_load(f);
+	if (ctx->pubk == NULL) {
+		ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
+		goto cleanup;
+	}
+
+	ret = true;
+cleanup:
+	fclose(f);
 	return (ret);
 }
 
@@ -135,7 +138,7 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 		curvesk[crypto_box_SECRETKEYBYTES],
 		session_key[ENCRYPTED_PAYLOAD_LEN], *p,
 		dig[ENCRYPT_VERIFY_SIG_LEN];
-	char *b64;
+	char *b64 = NULL;
 	blake2b_state sh;
 	chacha_state enc_st;
 	bool ret = false;
@@ -172,18 +175,14 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 	out = xfopen(outf, "w");
 	if (out == NULL) {
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
-		fclose(in);
-		return (false);
+		goto cleanup;
 	}
 
 	/* Since we need to seek, we must ensure that the file is a normal file */
 	out_fd = fileno(out);
 	if (fstat(out_fd, &st) == -1 || !S_ISREG(st.st_mode)) {
-		fclose(out);
-		fclose(in);
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
-
-		return (false);
+		goto cleanup;
 	}
 
 	crypto_sign_ed25519_sk_to_curve25519(curvesk, ctx->privk->data);
@@ -282,8 +281,11 @@ asignify_encrypt_crypt_file(asignify_encrypt_t *ctx, unsigned int version,
 	ret = true;
 
 cleanup:
-	fclose(out);
-	fclose(in);
+	free(b64);
+	if (out != NULL)
+		fclose(out);
+	if (in != NULL)
+		fclose(in);
 	explicit_memzero(&enc_st, sizeof(enc_st));
 	return (ret);
 }
@@ -340,8 +342,7 @@ asignify_encrypt_decrypt_file(asignify_encrypt_t *ctx,
 	out = xfopen(outf, "w");
 	if (out == NULL) {
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FILE);
-		fclose(in);
-		return (false);
+		goto cleanup;
 	}
 
 	/* Since we need to seek, we must ensure that the file is a normal file */
@@ -363,17 +364,18 @@ asignify_encrypt_decrypt_file(asignify_encrypt_t *ctx,
 		goto cleanup;
 	}
 
-	if (enc->version == 1) {
+	switch (enc->version) {
+	case 1:
 		/* Old format without rounds */
 		rounds = CHACHA_ROUNDS_SAFE;
-	}
-	else if (enc->version == 120) {
+		break;
+	case 120:
 		rounds = CHACHA_ROUNDS_SAFE;
-	}
-	else if (enc->version == 108) {
+		break;
+	case 108:
 		rounds = CHACHA_ROUNDS_FAST;
-	}
-	else {
+		break;
+	default:
 		ctx->error = xerr_string(ASIGNIFY_ERROR_FORMAT);
 		goto cleanup;
 	}
@@ -469,8 +471,10 @@ asignify_encrypt_decrypt_file(asignify_encrypt_t *ctx,
 	ret = true;
 
 cleanup:
-	fclose(out);
-	fclose(in);
+	if (out != NULL)
+		fclose(out);
+	if (in != NULL)
+		fclose(in);
 	explicit_memzero(session_key, sizeof(session_key));
 	explicit_memzero(&enc_st, sizeof(enc_st));
 	explicit_memzero(h, sizeof(h));

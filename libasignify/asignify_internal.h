@@ -47,6 +47,10 @@
 #define STRUCT_MEMBER_PTR(member_type, struct_p, struct_offset)   \
     ((member_type*)((void *)((unsigned char*)(struct_p) + (long)(struct_offset))))
 
+#ifndef nitems
+#define	nitems(x)	(sizeof((x)) / sizeof((x)[0]))
+#endif
+
 struct asignify_public_data {
 	unsigned char *data;
 	size_t data_len;

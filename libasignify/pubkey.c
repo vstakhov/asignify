@@ -25,6 +25,7 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -61,20 +62,23 @@ asignify_pubkey_try_obsd(const char *buf, size_t buflen,
 		return (true);
 	}
 
-	if (b64_pton(buf, (unsigned char *)&opk, sizeof(opk)) == sizeof(opk)) {
-		if (memcmp(opk.pkalg, OBSD_PKALG, sizeof(opk.pkalg)) == 0) {
-			res = xmalloc0(sizeof(*res));
-			/* OpenBSD version code */
-			res->version = 0;
-			res->data_len = sizeof(opk.pubkey);
-			res->id_len = sizeof(opk.keynum);
-			asignify_alloc_public_data_fields(res);
-			memcpy(res->data, opk.pubkey, res->data_len);
-			memcpy(res->id, opk.keynum, res->id_len);
-
-			*pk = res;
-		}
+	if (b64_pton(buf, (unsigned char *)&opk, sizeof(opk)) != sizeof(opk)) {
+		return (false);
 	}
+	if (memcmp(opk.pkalg, OBSD_PKALG, sizeof(opk.pkalg)) != 0) {
+		return (false);
+	}
+
+	res = xmalloc0(sizeof(*res));
+	/* OpenBSD version code */
+	res->version = 0;
+	res->data_len = sizeof(opk.pubkey);
+	res->id_len = sizeof(opk.keynum);
+	asignify_alloc_public_data_fields(res);
+	memcpy(res->data, opk.pubkey, res->data_len);
+	memcpy(res->id, opk.keynum, res->id_len);
+
+	*pk = res;
 
 	/*
 	 * We stop processing on the first non-comment line. If we have a key,
@@ -125,16 +129,18 @@ asignify_pubkey_try_ssh(const char *buf, size_t buflen,
 		return (false);
 	}
 
-	if (tlen == crypto_sign_ed25519_PUBLICKEYBYTES) {
-		res = xmalloc(sizeof(*res));
-		res->version = 1;
-		res->data_len = crypto_sign_ed25519_PUBLICKEYBYTES;
-		res->id_len = 0;
-		asignify_alloc_public_data_fields(res);
-		memcpy(res->data, tok, res->data_len);
-
-		*pk = res;
+	if (tlen != crypto_sign_ed25519_PUBLICKEYBYTES) {
+		return (true);
 	}
+
+	res = xmalloc(sizeof(*res));
+	res->version = 1;
+	res->data_len = crypto_sign_ed25519_PUBLICKEYBYTES;
+	res->id_len = 0;
+	asignify_alloc_public_data_fields(res);
+	memcpy(res->data, tok, res->data_len);
+
+	*pk = res;
 
 	return (true);
 }
@@ -199,42 +205,47 @@ asignify_pubkey_check_signature(struct asignify_public_data *pk,
 		return (false);
 	}
 
-	if (pk->version == sig->version) {
-		switch (pk->version) {
-		case 0:
-			if (pk->data_len == crypto_sign_PUBLICKEYBYTES &&
-					sig->data_len == crypto_sign_BYTES) {
-				SHA512Init(&sh);
-				SHA512Update(&sh, sig->data, 32);
-				SHA512Update(&sh, pk->data, 32);
-				SHA512Update(&sh, data, dlen);
-				SHA512Final(h, &sh);
+	assert(pk->version == sig->version);
 
-				if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data) == 0) {
-					return (true);
-				}
-			}
-			break;
-		case 1:
-			if (pk->data_len == crypto_sign_PUBLICKEYBYTES &&
-					sig->data_len == crypto_sign_BYTES) {
-				/* ED25519 */
-				SHA512Init(&sh);
-				SHA512Update(&sh, sig->data, 32);
-				SHA512Update(&sh, pk->data, 32);
-				SHA512Update(&sh, (const uint8_t *)&sig->version,
-									sizeof(sig->version));
-				SHA512Update(&sh, data, dlen);
-				SHA512Final(h, &sh);
-
-				if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data) == 0) {
-					return (true);
-				}
-			}
-			break;
-		default:
+	switch (pk->version) {
+	case 0:
+		if (pk->data_len != crypto_sign_PUBLICKEYBYTES ||
+				sig->data_len != crypto_sign_BYTES) {
 			break;
 		}
+
+		SHA512Init(&sh);
+		SHA512Update(&sh, sig->data, 32);
+		SHA512Update(&sh, pk->data, 32);
+		SHA512Update(&sh, data, dlen);
+		SHA512Final(h, &sh);
+
+		if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data) == 0) {
+			return (true);
+		}
+		break;
+	case 1:
+		if (pk->data_len != crypto_sign_PUBLICKEYBYTES ||
+				sig->data_len != crypto_sign_BYTES) {
+			break;
+		}
+
+		/* ED25519 */
+		SHA512Init(&sh);
+		SHA512Update(&sh, sig->data, 32);
+		SHA512Update(&sh, pk->data, 32);
+		SHA512Update(&sh, (const uint8_t *)&sig->version,
+							sizeof(sig->version));
+		SHA512Update(&sh, data, dlen);
+		SHA512Final(h, &sh);
+
+		if (crypto_sign_ed25519_verify_detached(sig->data, h, pk->data) == 0) {
+			return (true);
+		}
+
+		break;
+	default:
+		break;
 	}
 
 	return (false);
@@ -250,18 +261,22 @@ asignify_pubkey_write(struct asignify_public_data *pk, FILE *f)
 		return (false);
 	}
 
-	if (pk->version == 1) {
-		b64id = xmalloc(pk->id_len * 2);
-		b64_ntop(pk->id, pk->id_len, b64id, pk->id_len * 2);
-		b64data = xmalloc(pk->data_len * 2);
-		b64_ntop(pk->data, pk->data_len, b64data, pk->data_len * 2);
-		ret = (fprintf(f, "%s1:%s:%s\n", PUBKEY_MAGIC, b64id, b64data) > 0);
-		free(b64id);
-		free(b64data);
-	}
-	else if (pk->version == 0) {
+	if (pk->version == 0) {
 		/* XXX: support openbsd pubkeys format */
+		return (false);
 	}
+	if (pk->version != 1) {
+		/* Future formats . */
+		return (false);
+	}
+
+	b64id = xmalloc(pk->id_len * 2);
+	b64_ntop(pk->id, pk->id_len, b64id, pk->id_len * 2);
+	b64data = xmalloc(pk->data_len * 2);
+	b64_ntop(pk->data, pk->data_len, b64data, pk->data_len * 2);
+	ret = (fprintf(f, "%s1:%s:%s\n", PUBKEY_MAGIC, b64id, b64data) > 0);
+	free(b64id);
+	free(b64data);
 
 	return (ret);
 }

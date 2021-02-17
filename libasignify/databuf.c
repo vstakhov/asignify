@@ -144,7 +144,7 @@ asignify_public_data_load(const char *buf, size_t buflen, const char *magic,
 	char *errstr;
 	const char *p = buf;
 	unsigned int version;
-	size_t remain = buflen, blen;
+	size_t blen;
 	struct asignify_public_data *res = NULL;
 
 	if (buflen <= magiclen || memcmp (buf, magic, magiclen) != 0) {
@@ -152,7 +152,6 @@ asignify_public_data_load(const char *buf, size_t buflen, const char *magic,
 	}
 
 	p += magiclen;
-	remain -= magiclen;
 
 	version = strtoul(p, &errstr, 10);
 	if (errstr == NULL || *errstr != ':'
@@ -183,15 +182,17 @@ asignify_public_data_load(const char *buf, size_t buflen, const char *magic,
 		return (NULL);
 	}
 
-	if ((p = strchr(p, ':')) != NULL) {
-		/* We have some aux data for this line */
-		p ++;
-		res->aux_len = strcspn(p, "\n\r");
-		if (res->aux_len > 0) {
-			res->aux = xmalloc(res->aux_len + 1);
-			memcpy(res->aux, p, res->aux_len);
-			res->aux[res->aux_len] = '\0';
-		}
+	if ((p = strchr(p, ':')) == NULL) {
+		return (res);
+	}
+
+	/* We have some aux data for this line */
+	p ++;
+	res->aux_len = strcspn(p, "\n\r");
+	if (res->aux_len > 0) {
+		res->aux = xmalloc(res->aux_len + 1);
+		memcpy(res->aux, p, res->aux_len);
+		res->aux[res->aux_len] = '\0';
 	}
 
 	return (res);
@@ -215,17 +216,19 @@ asignify_parser_fields_cmp(const void *k, const void *st)
 static void
 asignify_privkey_cleanup(struct asignify_private_key *privk)
 {
-	if (privk != NULL) {
-		free(privk->checksum);
-		if (privk->encrypted_blob) {
-			explicit_memzero(privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
-		}
-		free(privk->encrypted_blob);
-		free(privk->id);
-		free(privk->pbkdf_alg);
-		free(privk->salt);
-		explicit_memzero(privk, sizeof(*privk));
+	if (privk == NULL) {
+		return;
 	}
+
+	free(privk->checksum);
+	if (privk->encrypted_blob) {
+		explicit_memzero(privk->encrypted_blob, crypto_sign_SECRETKEYBYTES);
+	}
+	free(privk->encrypted_blob);
+	free(privk->id);
+	free(privk->pbkdf_alg);
+	free(privk->salt);
+	explicit_memzero(privk, sizeof(*privk));
 }
 
 static bool
@@ -373,28 +376,20 @@ asignify_private_data_parse_line(const char *buf, size_t buflen,
 static bool
 asignify_private_key_is_sane(struct asignify_private_key *privk)
 {
-	if (privk->pbkdf_alg && strcmp(privk->pbkdf_alg, PBKDF_ALG) == 0) {
-		if (privk->rounds >= PBKDF_MINROUNDS) {
-			if (privk->salt) {
-				if (privk->version == 1) {
-					if (privk->encrypted_blob != NULL &&
-									privk->checksum != NULL) {
-						return (true);
-					}
-				}
-			}
-		}
-	}
-	else {
+	if (!privk->pbkdf_alg || strcmp(privk->pbkdf_alg, PBKDF_ALG) != 0) {
 		/* Unencrypted key */
-		if (privk->version == 1) {
-			if (privk->encrypted_blob != NULL) {
-				return (true);
-			}
-		}
+		return (privk->version == 1 && privk->encrypted_blob != NULL);
 	}
 
-	return (false);
+	if (privk->rounds < PBKDF_MINROUNDS) {
+		return (false);
+	}
+
+	if (privk->salt == NULL || privk->version != 1) {
+		return (false);
+	}
+
+	return (privk->encrypted_blob != NULL && privk->checksum != NULL);
 }
 
 static void
@@ -424,65 +419,62 @@ asignify_private_data_unpack_key(struct asignify_private_key *privk, int *error,
 	unsigned char xorkey[crypto_sign_SECRETKEYBYTES];
 	unsigned char res_checksum[BLAKE2B_OUTBYTES];
 	int r;
+	bool ok = false;
 
 	priv = xmalloc(sizeof(*priv));
-
-	if (privk->pbkdf_alg) {
-		/* We need to derive key */
-		if (password_cb == NULL) {
-			free(priv);
-			asignify_privkey_cleanup(privk);
-			return (NULL);
-		}
-
-		/* Some buffer overflow protection */
-		randombytes(canary, sizeof(canary));
-		memcpy(password + sizeof(password) - sizeof(canary), canary,
-				sizeof(canary));
-		r = password_cb(password, sizeof(password) - sizeof(canary), d);
-		if (r <= 0 || r > sizeof(password) - sizeof(canary) ||
-			memcmp(password + sizeof(password) - sizeof(canary), canary, sizeof(canary)) != 0) {
-			free(priv);
-			explicit_memzero(password, sizeof(password));
-			asignify_privkey_cleanup(privk);
-			return (NULL);
-		}
-
-		if (pkcs5_pbkdf2(password, r, privk->salt, SALT_LEN, xorkey, sizeof(xorkey),
-			privk->rounds) == -1) {
-			free(priv);
-			explicit_memzero(password, sizeof(password));
-			asignify_privkey_cleanup(privk);
-			return (NULL);
-		}
-		explicit_memzero(password, sizeof(password));
-
-		for (r = 0; r < sizeof(xorkey); r ++) {
-			privk->encrypted_blob[r] ^= xorkey[r];
-		}
-
-		explicit_memzero(xorkey, sizeof(xorkey));
-		blake2b(res_checksum, privk->encrypted_blob, NULL, BLAKE2B_OUTBYTES,
-			sizeof(xorkey), 0);
-
-		if (memcmp(res_checksum, privk->checksum, sizeof(res_checksum)) != 0) {
-			asignify_privkey_cleanup(privk);
-			free(priv);
-
-			if (error != NULL) {
-				*error = ASIGNIFY_ERROR_PASSWORD;
-			}
-
-			return (NULL);
-		}
-		asignify_pkey_to_private_data(privk, priv);
-	}
-	else {
-		asignify_pkey_to_private_data(privk, priv);
+	if (privk->pbkdf_alg == NULL) {
+		goto done;
 	}
 
+	/* We need to derive key */
+	if (password_cb == NULL) {
+		goto cleanup;
+	}
+
+	/* Some buffer overflow protection */
+	randombytes(canary, sizeof(canary));
+	memcpy(password + sizeof(password) - sizeof(canary), canary,
+			sizeof(canary));
+	r = password_cb(password, sizeof(password) - sizeof(canary), d);
+	if (r <= 0 || r > sizeof(password) - sizeof(canary) ||
+		memcmp(password + sizeof(password) - sizeof(canary), canary, sizeof(canary)) != 0) {
+		goto cleanup;
+	}
+
+	if (pkcs5_pbkdf2(password, r, privk->salt, SALT_LEN, xorkey, sizeof(xorkey),
+		privk->rounds) == -1) {
+		goto cleanup;
+	}
+
+	explicit_memzero(password, sizeof(password));
+
+	for (r = 0; r < sizeof(xorkey); r ++) {
+		privk->encrypted_blob[r] ^= xorkey[r];
+	}
+
+	explicit_memzero(xorkey, sizeof(xorkey));
+	blake2b(res_checksum, privk->encrypted_blob, NULL, BLAKE2B_OUTBYTES,
+		sizeof(xorkey), 0);
+
+	if (memcmp(res_checksum, privk->checksum, sizeof(res_checksum)) != 0) {
+		if (error != NULL) {
+			*error = ASIGNIFY_ERROR_PASSWORD;
+		}
+
+		goto cleanup;
+	}
+
+done:
+	ok = true;
+	asignify_pkey_to_private_data(privk, priv);
+
+cleanup:
+	explicit_memzero(password, sizeof(password));
 	asignify_privkey_cleanup(privk);
-
+	if (!ok) {
+		free(priv);
+		priv = NULL;
+	}
 	return (priv);
 }
 
@@ -492,51 +484,52 @@ asignify_private_data_load(FILE *f, int *error,
 {
 	char *buf = NULL;
 	size_t buflen = 0;
+	struct asignify_private_data *pkeyd;
 	struct asignify_private_key privk;
-	bool first = true;
 	ssize_t r;
 
 	memset(&privk, 0, sizeof(privk));
+	pkeyd = NULL;
 
-	while ((r = getline(&buf, &buflen, f)) != -1) {
-		if (first) {
-			/* Check magic */
-			if (memcmp(buf, PRIVKEY_MAGIC, sizeof(PRIVKEY_MAGIC) - 1) == 0) {
-				first = false;
-			}
-			else {
-				return (NULL);
-			}
-		}
-		else {
-			if (!asignify_private_data_parse_line(buf, r, &privk)) {
-				asignify_privkey_cleanup(&privk);
-				return (NULL);
-			}
-		}
-	}
-
-	if (!asignify_private_key_is_sane(&privk)) {
-		asignify_privkey_cleanup(&privk);
+	if ((r = getline(&buf, &buflen, f)) == -1) {
 		return (NULL);
 	}
 
-	return (asignify_private_data_unpack_key(&privk, error, password_cb, d));
+	if (r < sizeof(PRIVKEY_MAGIC) - 1 ||
+		memcmp(buf, PRIVKEY_MAGIC, sizeof(PRIVKEY_MAGIC) - 1) != 0) {
+		return (NULL);
+	}
+
+	while ((r = getline(&buf, &buflen, f)) != -1) {
+		if (!asignify_private_data_parse_line(buf, r, &privk)) {
+			goto cleanup;
+		}
+	}
+
+	if (asignify_private_key_is_sane(&privk)) {
+		pkeyd = asignify_private_data_unpack_key(&privk, error, password_cb, d);
+	}
+
+cleanup:
+	asignify_privkey_cleanup(&privk);
+	return (pkeyd);
 }
 
 void
 asignify_private_data_free(struct asignify_private_data *d)
 {
-	if (d != NULL) {
-		free(d->id);
-		d->id = NULL;
-		explicit_memzero(d->data, d->data_len);
-#ifdef HAVE_MLOCK
-		munlock(d->data, d->data_len);
-#endif
-		free(d->data);
-		free(d);
+	if (d == NULL) {
+		return;
 	}
+
+	free(d->id);
+	d->id = NULL;
+	explicit_memzero(d->data, d->data_len);
+#ifdef HAVE_MLOCK
+	munlock(d->data, d->data_len);
+#endif
+	free(d->data);
+	free(d);
 }
 
 const unsigned char *

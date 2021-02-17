@@ -51,6 +51,19 @@
 
 #include "asignify_internal.h"
 
+static const unsigned int digest_lens[] = {
+	[ASIGNIFY_DIGEST_SHA512] = SHA512_DIGEST_LENGTH,
+	[ASIGNIFY_DIGEST_SHA256] = SHA256_DIGEST_LENGTH,
+	[ASIGNIFY_DIGEST_BLAKE2] = BLAKE2B_OUTBYTES,
+};
+
+static const char *digest_names[] = {
+	[ASIGNIFY_DIGEST_SHA512] = "SHA512",
+	[ASIGNIFY_DIGEST_SHA256] = "SHA256",
+	[ASIGNIFY_DIGEST_BLAKE2] = "BLAKE2",
+	[ASIGNIFY_DIGEST_SIZE] = "SIZE",
+};
+
 const char* err_str[ASIGNIFY_ERROR_MAX] = {
 	[ASIGNIFY_ERROR_OK] = "no error",
 	[ASIGNIFY_ERROR_FILE] = "file IO error",
@@ -369,28 +382,14 @@ bin2hex(char * const hex, const size_t hex_maxlen,
     return hex;
 }
 
-
 unsigned int
 asignify_digest_len(enum asignify_digest_type type)
 {
-	unsigned int ret;
 
-	switch(type) {
-	case ASIGNIFY_DIGEST_SHA512:
-		ret = SHA512_DIGEST_LENGTH;
-		break;
-	case ASIGNIFY_DIGEST_SHA256:
-		ret = SHA256_DIGEST_LENGTH;
-		break;
-	case ASIGNIFY_DIGEST_BLAKE2:
-		ret = BLAKE2B_OUTBYTES;
-		break;
-	default:
-		ret = 0;
-		break;
+	if (type >= nitems(digest_lens)) {
+		return (0);
 	}
-
-	return (ret);
+	return (digest_lens[type]);
 }
 
 const char *
@@ -398,22 +397,8 @@ asignify_digest_name(enum asignify_digest_type type)
 {
 	const char *ret;
 
-	switch(type) {
-	case ASIGNIFY_DIGEST_SHA512:
-		ret = "SHA512";
-		break;
-	case ASIGNIFY_DIGEST_SHA256:
-		ret = "SHA256";
-		break;
-	case ASIGNIFY_DIGEST_BLAKE2:
-		ret = "BLAKE2";
-		break;
-	case ASIGNIFY_DIGEST_SIZE:
-		ret = "SIZE";
-		break;
-	default:
-		ret = "";
-		break;
+	if (type >= nitems(digest_names) || (ret = digest_names[type]) == NULL) {
+		return ("");
 	}
 
 	return (ret);
@@ -465,6 +450,24 @@ asignify_digest_init(enum asignify_digest_type type)
 	}
 
 	return (res);
+}
+
+static void
+asignify_digest_free(enum asignify_digest_type type, void *res)
+{
+
+	switch (type) {
+	case ASIGNIFY_DIGEST_BLAKE2:
+		free(res);
+		break;
+	default:
+#ifdef HAVE_OPENSSL
+		EVP_MD_CTX_free(res);
+#else
+		free(res);
+#endif
+		break;
+	}
 }
 
 static void
@@ -526,34 +529,30 @@ asignify_digest_final(enum asignify_digest_type type, void *ctx)
 #ifdef HAVE_OPENSSL
 			mdctx = (EVP_MD_CTX *)ctx;
 			EVP_DigestFinal(mdctx, res, &len);
-			EVP_MD_CTX_destroy(mdctx);
 #else
 			st = (SHA2_CTX *)ctx;
 			SHA512Final(res, st);
-			free(st);
 #endif
 			break;
 		case ASIGNIFY_DIGEST_SHA256:
 #ifdef HAVE_OPENSSL
 			mdctx = (EVP_MD_CTX *)ctx;
 			EVP_DigestFinal(mdctx, res, &len);
-			EVP_MD_CTX_destroy(mdctx);
 #else
 			st = (SHA2_CTX *)ctx;
 			SHA256Final(res, st);
-			free(st);
 #endif
 			break;
 		case ASIGNIFY_DIGEST_BLAKE2:
 			bst = (blake2b_state *)ctx;
 			blake2b_final(bst, res, len);
-			free(bst);
 			break;
 		default:
 			abort();
 			break;
 	}
 
+	asignify_digest_free(type, ctx);
 	return (res);
 }
 
@@ -575,8 +574,7 @@ asignify_digest_fd(enum asignify_digest_type type, int fd)
 	}
 
 	if (lseek(fd, 0, SEEK_SET) == (off_t)-1) {
-		/* XXX: not correct if openssl is used */
-		free(dgst);
+		asignify_digest_free(type, dgst);
 		return (NULL);
 	}
 
