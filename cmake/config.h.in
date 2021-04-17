@@ -1,0 +1,106 @@
+#ifndef LIBASIGNIFY_CONFIG_H
+#define LIBASIGNIFY_CONFIG_H
+
+#define VERSION "${LIBASIGNIFY_VERSION}"
+
+/* Define to 1 if you have the `aligned_alloc' function. */
+#cmakedefine HAVE_ALIGNED_ALLOC 1
+
+/* Define to 1 if you have the `arc4random_buf' function. */
+#cmakedefine HAVE_ARC4RANDOM_BUF 1
+
+/* Define to 1 if you have the `bcopy' function. */
+#cmakedefine HAVE_BCOPY 1
+
+/* Define to 1 if you have the <bsd/err.h> header file. */
+#cmakedefine HAVE_BSD_ERR_H 1
+
+/* Define to 1 if you have the <bsd/libutil.h> header file. */
+#cmakedefine HAVE_BSD_LIBUTIL_H 1
+
+/* Define to 1 if you have the <bsd/readpassphrase.h> header file. */
+#cmakedefine HAVE_BSD_READPASSPHRASE_H 1
+
+
+/* Define 1 if you have 'capsicum'. */
+#cmakedefine HAVE_CAPSICUM 1
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#cmakedefine HAVE_DLFCN_H 1
+
+/* Define to 1 if you have the `explicit_bzero' function. */
+#cmakedefine HAVE_EXPLICIT_BZERO 1
+
+/* Use getrandom for entropy gain */
+#cmakedefine HAVE_GETRANDOM 1
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#cmakedefine HAVE_INTTYPES_H 1
+
+/* Define to 1 if you have the `bsd' library (-lbsd). */
+#cmakedefine HAVE_LIBBSD 1
+
+/* Define to 1 if you have the `memmove' function. */
+#cmakedefine HAVE_MEMMOVE 1
+
+/* Define to 1 if you have the <memory.h> header file. */
+#cmakedefine HAVE_MEMORY_H 1
+
+/* Define to 1 if you have the `memset_s' function. */
+#cmakedefine HAVE_MEMSET_S 1
+
+/* Define 1 if you have openssl. */
+#cmakedefine HAVE_OPENSSL 1
+
+/* Use O_NOFOLLOW for open */
+#cmakedefine HAVE_O_NOFOLLOW 1
+
+/* Define to 1 if you have the `posix_memalign' function. */
+#cmakedefine HAVE_POSIX_MEMALIGN 1
+
+/* Define to 1 if you have the <readpassphrase.h> header file. */
+#cmakedefine HAVE_READPASSPHRASE_H 1
+
+/* Define to 1 if you have the <stdarg.h> header file. */
+#cmakedefine HAVE_STDARG_H 1
+
+/* Define to 1 if you have the <stdbool.h> header file. */
+#cmakedefine HAVE_STDBOOL_H 1
+
+/* Define to 1 if you have the <stddef.h> header file. */
+#cmakedefine HAVE_STDDEF_H 1
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#cmakedefine HAVE_STDINT_H 1
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#cmakedefine HAVE_STDLIB_H 1
+
+/* Define to 1 if you have the <strings.h> header file. */
+#cmakedefine HAVE_STRINGS_H 1
+
+/* Define to 1 if you have the <string.h> header file. */
+#cmakedefine HAVE_STRING_H 1
+
+/* Define to 1 if you have the <sys/capability.h> header file. */
+#cmakedefine HAVE_SYS_CAPABILITY_H 1
+
+/* Define to 1 if you have the <sys/capsicum.h> header file. */
+#cmakedefine HAVE_SYS_CAPSICUM_H 1
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#cmakedefine HAVE_SYS_STAT_H 1
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#cmakedefine HAVE_SYS_TYPES_H 1
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#cmakedefine HAVE_UNISTD_H 1
+
+/* Define to 1 if you have the `valloc' function. */
+#cmakedefine HAVE_VALLOC 1
+
+/* weak symbols are supported */
+#cmakedefine HAVE_WEAK_SYMBOLS 1
+
+#endif
