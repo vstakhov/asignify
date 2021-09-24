@@ -43,7 +43,11 @@
 #include <bsd/stdlib.h>
 #endif
 #ifdef HAVE_GETRANDOM
+#ifdef HAVE_LINUX_RANDOM_H
 #include <linux/random.h>
+#else
+#include <sys/random.h>
+#endif
 #endif
 
 #include "sha2.h"
