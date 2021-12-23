@@ -92,6 +92,8 @@ add_library(libasignify
         libasignify/tweetnacl.h
         libasignify/util.c
         libasignify/verify.c)
+set_target_properties(libasignify
+        PROPERTIES PREFIX "")
 target_link_options(libasignify
         PUBLIC "LINKER:--version-script=${CMAKE_SOURCE_DIR}/libasignify/libasignify.ver")
 
