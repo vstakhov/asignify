@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13)
 
 set(CMAKE_C_STANDARD 11)
 
@@ -92,6 +92,8 @@ add_library(libasignify
         libasignify/tweetnacl.h
         libasignify/util.c
         libasignify/verify.c)
+target_link_options(libasignify
+        PUBLIC "LINKER:--version-script=${CMAKE_SOURCE_DIR}/libasignify/libasignify.ver")
 
 add_executable(asignify
         src/asignify.c

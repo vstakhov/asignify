@@ -1,0 +1,42 @@
+LIBASIGNIFY_1.0 {
+global:
+	asignify_verify_init;
+	asignify_verify_load_pubkey;
+	asignify_verify_load_signature;
+	asignify_verify_file;
+	asignify_verify_get_error;
+	asignify_verify_free;
+
+	asignify_sign_init;
+	asignify_sign_load_privkey;
+	asignify_sign_add_file;
+	asignify_sign_write_signature;
+	asignify_sign_get_error;
+	asignify_sign_free;
+
+	asignify_generate;
+	asignify_generate_pubkey;
+
+	explicit_memzero;
+
+	asignify_digest_len;
+	asignify_digest_name;
+	asignify_digest_fd;
+	asignify_digest_from_str;
+
+	asignify_privkey_from_ssh;
+
+	asignify_encrypt_init;
+	asignify_encrypt_load_pubkey;
+	asignify_encrypt_load_privkey;
+	asignify_encrypt_crypt_file;
+	asignify_encrypt_decrypt_file;
+	asignify_encrypt_get_error;
+	asignify_encrypt_free;
+
+	# CSU symbols, sigh.
+	__progname;
+	environ;
+local:
+	*;
+};
