@@ -92,6 +92,8 @@ add_library(libasignify
         libasignify/tweetnacl.h
         libasignify/util.c
         libasignify/verify.c)
+set_target_properties(libasignify
+        PROPERTIES PREFIX "")
 
 add_executable(asignify
         src/asignify.c
